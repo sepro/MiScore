@@ -1,6 +1,8 @@
-from validator import ObservationData, Observation
 import json
+
 import pytest
+
+from validator import ObservationData, Observation
 
 
 def test_on_working_data():

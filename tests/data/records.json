@@ -1,0 +1,13 @@
+{
+  "games": [
+    {
+      "name": "Doom (2016)",
+      "difficulties": ["I'm Too Young To Die", "Hurt Me Plenty", "Ultra-Violence", "Nightmare", "Ultra-Nightmare"]
+    }, {
+      "name": "Gwent: Rogue Mage",
+      "difficulties": ["Novice", "Apprentice", "Adapt", "Master", "Grandmaster"]
+    }, {
+      "name": "Gwent"
+    }
+  ]
+}

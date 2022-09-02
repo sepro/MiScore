@@ -20,28 +20,10 @@ class Observation(BaseModel):
     petal_width: float
     species: SpeciesEnum
 
-    @validator("sepal_length")
-    def sepal_length_larger_than_zero(cls, value):
+    @validator("sepal_length", "sepal_width", "petal_length", "petal_width")
+    def larger_than_zero(cls, value):
         if value <= 0:
-            raise ValueError(f"Sepal length {value} smaller than (or equal to) zero")
-        return value
-
-    @validator("sepal_width")
-    def sepal_width_larger_than_zero(cls, value):
-        if value <= 0:
-            raise ValueError(f"Sepal width {value} smaller than (or equal to) zero")
-        return value
-
-    @validator("petal_length")
-    def petal_length_larger_than_zero(cls, value):
-        if value <= 0:
-            raise ValueError(f"Petal length {value} smaller than (or equal to) zero")
-        return value
-
-    @validator("petal_width")
-    def petal_width_larger_than_zero(cls, value):
-        if value <= 0:
-            raise ValueError(f"Petal width {value} smaller than (or equal to) zero")
+            raise ValueError(f"{value} smaller than (or equal to) zero")
         return value
 
     @root_validator

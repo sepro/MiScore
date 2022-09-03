@@ -45,6 +45,15 @@
             "score": "25092",
             "date": "2022-08-04"
           }]
+        },
+        {
+          "name": "Fastest Time",
+          "description": "Finish a run as fast as possible",
+          "type": "fastest_time",
+          "records": [{
+            "time": "00:24:04",
+            "date": "2022-07-08"
+          }]
         }
       ]
     },

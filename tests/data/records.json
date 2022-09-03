@@ -2,11 +2,53 @@
   "games": [
     {
       "name": "Doom (2016)",
-      "difficulties": ["I'm Too Young To Die", "Hurt Me Plenty", "Ultra-Violence", "Nightmare", "Ultra-Nightmare"]
-    }, {
+      "difficulties": [
+        "I'm Too Young To Die",
+        "Hurt Me Plenty",
+        "Ultra-Violence",
+        "Nightmare",
+        "Ultra-Nightmare"
+      ],
+      "record_types": [
+        {
+          "name": "Completed Game",
+          "description": "Finish the game at a specific difficulty",
+          "type": "completed_at_difficulty",
+          "records": []
+        }
+      ]
+    },
+    {
       "name": "Gwent: Rogue Mage",
-      "difficulties": ["Novice", "Apprentice", "Adapt", "Master", "Grandmaster"]
-    }, {
+      "difficulties": [
+        "Novice",
+        "Apprentice",
+        "Adapt",
+        "Master",
+        "Grandmaster"
+      ],
+      "record_types": [
+        {
+          "name": "Completed Run",
+          "description": "Finish a run at a specific difficulty",
+          "type": "completed_at_difficulty",
+          "records": [{
+            "difficulty": "Grandmaster",
+            "date": "2022-08-04"
+          }]
+        },
+        {
+          "name": "Highest Score",
+          "description": "Try to get a score as high as possible at the end of a run",
+          "type": "high_score",
+          "records": [{
+            "score": "25092",
+            "date": "2022-08-04"
+          }]
+        }
+      ]
+    },
+    {
       "name": "Gwent"
     }
   ]

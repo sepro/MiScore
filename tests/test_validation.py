@@ -8,8 +8,8 @@ def test_on_working_data():
     was included correctly.
     """
     with open("./tests/data/records.json") as fin:
-        iris_data = json.load(fin)
+        game_data = json.load(fin)
 
-    observation_data = RecordData(**iris_data)
+    record_data = RecordData(**game_data)
 
-    assert len(observation_data.games) > 0
+    assert len(record_data.games) > 0

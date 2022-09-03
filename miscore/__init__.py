@@ -1,1 +1,1 @@
-from .oberservation_data import RecordData, Game
+from .record_data import RecordData, Game

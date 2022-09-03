@@ -32,28 +32,34 @@
           "name": "Completed Run",
           "description": "Finish a run at a specific difficulty",
           "type": "completed_at_difficulty",
-          "records": [{
-            "difficulty": "Grandmaster",
-            "date": "2022-08-04"
-          }]
+          "records": [
+            {
+              "difficulty": "Grandmaster",
+              "date": "2022-08-04"
+            }
+          ]
         },
         {
           "name": "Highest Score",
           "description": "Try to get a score as high as possible at the end of a run",
           "type": "high_score",
-          "records": [{
-            "score": "25092",
-            "date": "2022-08-04"
-          }]
+          "records": [
+            {
+              "score": "25092",
+              "date": "2022-08-04"
+            }
+          ]
         },
         {
           "name": "Fastest Time",
           "description": "Finish a run as fast as possible",
           "type": "fastest_time",
-          "records": [{
-            "time": "00:24:04",
-            "date": "2022-07-08"
-          }]
+          "records": [
+            {
+              "time": "00:24:04",
+              "date": "2022-07-08"
+            }
+          ]
         }
       ]
     },

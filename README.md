@@ -11,7 +11,7 @@ a leaderboard to track scores across different games just for YOU!
 
 This is very much a work in progress, here is a rough sketch of the steps planned.
 
-  - [ ] Work out json schema and Pydantic code to load and validate data
+  - [X] Work out json schema and Pydantic code to load and validate data
   - [ ] Interface (textual ?) to add data
   - [ ] Front-end (Svelte?) to show result on a static webpage
 

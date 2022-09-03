@@ -11,6 +11,7 @@ class CompletedRecordEntry(BaseModel, extra=Extra.forbid):
     """
 
     date: Union[date, datetime]
+    description: Optional[str]
 
 
 class CompletedAtDifficultyRecordEntry(CompletedRecordEntry):

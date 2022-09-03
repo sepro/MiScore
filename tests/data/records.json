@@ -64,7 +64,35 @@
       ]
     },
     {
-      "name": "Gwent"
+      "name": "Gwent",
+      "record_types": [
+        {
+          "name": "Highest fMMR",
+          "description": "Highest faction MMR score achieved in a season",
+          "type": "high_score",
+          "records": [
+            {
+              "date": "2022-07-07",
+              "score": "2511",
+              "description": "With Northern Realms"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "It takes two",
+      "record_types": [
+        {
+          "name": "Completed Game",
+          "type": "completed",
+          "records": [
+            {
+              "date": "2022-07-07"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

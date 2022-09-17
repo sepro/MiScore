@@ -1,4 +1,5 @@
 [![Run Pytest](https://github.com/sepro/MiScore/actions/workflows/autopytest.yml/badge.svg)](https://github.com/sepro/MiScore/actions/workflows/autopytest.yml)
+[![codecov](https://codecov.io/gh/sepro/MiScore/branch/main/graph/badge.svg?token=KAic2QxDLZ)](https://codecov.io/gh/sepro/MiScore)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 # MiScore - The anti-social leaderboard

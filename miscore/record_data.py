@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, date
 from enum import Enum
 from typing import List, Optional, Union
@@ -121,3 +122,10 @@ class RecordData(BaseModel):
     """
 
     games: List[Game]
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename) as fin:
+            json_data = json.load(fin)
+
+            return RecordData(**json_data)

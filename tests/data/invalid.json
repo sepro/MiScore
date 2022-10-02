@@ -1,0 +1,98 @@
+{
+  "games": [
+    {
+      "name": "Doom (2016)",
+      "difficulties": [
+        "I'm Too Young To Die",
+        "Hurt Me Plenty",
+        "Ultra-Violence",
+        "Nightmare",
+        "Ultra-Nightmare"
+      ],
+      "record_types": [
+        {
+          "name": "Completed Game",
+          "description": "Finish the game at a specific difficulty",
+          "type": "completed_at_difficulty",
+          "records": []
+        }
+      ]
+    },
+    {
+      "name": "Gwent: Rogue Mage",
+      "difficulties": [
+        "Novice",
+        "Apprentice",
+        "Adapt",
+        "Master",
+        "Grandmaster"
+      ],
+      "record_types": [
+        {
+          "name": "Completed Run",
+          "description": "Finish a run at a specific difficulty",
+          "type": "completed_at_difficulty",
+          "records": [
+            {
+              "difficulty": "Invalid difficulty",
+              "date": "2022-08-04"
+            }
+          ]
+        },
+        {
+          "name": "Highest Score",
+          "description": "Try to get a score as high as possible at the end of a run",
+          "type": "high_score",
+          "records": [
+            {
+              "score": "25092",
+              "date": "2022-08-04"
+            }
+          ]
+        },
+        {
+          "name": "Fastest Time",
+          "description": "Finish a run as fast as possible",
+          "type": "fastest_time",
+          "records": [
+            {
+              "time": "00:24:04",
+              "date": "2022-07-08"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gwent",
+      "record_types": [
+        {
+          "name": "Highest fMMR",
+          "description": "Highest faction MMR score achieved in a season",
+          "type": "high_score",
+          "records": [
+            {
+              "date": "2022-07-07",
+              "score": "2511",
+              "description": "With Northern Realms"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "It takes two",
+      "record_types": [
+        {
+          "name": "Completed Game",
+          "type": "completed",
+          "records": [
+            {
+              "date": "2022-07-07"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

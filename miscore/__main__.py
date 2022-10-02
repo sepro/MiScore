@@ -3,8 +3,8 @@ from .record_data import RecordData
 
 
 @click.command()
-@click.argument('filename')
-@click.option('--raise_error', is_flag=True)
+@click.argument("filename")
+@click.option("--raise_error", is_flag=True)
 def validate(filename, raise_error):
     try:
         _ = RecordData.load(filename)

@@ -1,4 +1,4 @@
-# GitHub Action that uses Black to reformat the Python code in an incoming push request.
+# GitHub Action that runs pytest with a coverage report
 
 name: Run Pytest
 on: [ push ]

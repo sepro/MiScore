@@ -21,6 +21,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=setuptools.find_packages(where="miscore"),
+    packages=["miscore"],
     python_requires=">=3.6",
 )

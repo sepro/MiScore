@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="MiScore",
+    name="miscore",
     version="0.0.1",
     author="Sebastian Proost",
     author_email="sebastian.proost@gmail.com",

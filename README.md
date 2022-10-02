@@ -24,7 +24,7 @@ an environment.
 ```commandline
 python -m venv venv
 activate venv/bin/activate
-pip install -r requirements.dev.txt
+pip install -r requirements.txt
 ```
 
 Now you can run the test suite using

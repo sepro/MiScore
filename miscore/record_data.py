@@ -146,5 +146,3 @@ class RecordData(BaseModel):
         os.chdir(old_wd)
 
         return record_data
-
-

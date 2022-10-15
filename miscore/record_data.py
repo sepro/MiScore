@@ -1,9 +1,10 @@
 import json
+import os
 from datetime import datetime, timedelta, date
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, root_validator, Extra
+from pydantic import BaseModel, root_validator, Extra, FilePath
 
 
 class CompletedRecordEntry(BaseModel, extra=Extra.forbid):
@@ -13,6 +14,7 @@ class CompletedRecordEntry(BaseModel, extra=Extra.forbid):
 
     date: Union[date, datetime]
     description: Optional[str]
+    screenshot: Optional[FilePath]
 
 
 class CompletedAtDifficultyRecordEntry(CompletedRecordEntry):
@@ -125,7 +127,24 @@ class RecordData(BaseModel):
 
     @classmethod
     def load(cls, filename):
-        with open(filename) as fin:
+        """
+        Will load records from a JSON file.
+
+        For the FilePath validator to work with relative paths, the working directory needs to be set to the loaded
+        file. Before the end of the function the working directory is set back to the original.
+        """
+        old_wd = os.getcwd()
+        current_directory = os.path.dirname(filename)
+        current_file = os.path.basename(filename)
+        os.chdir(current_directory)
+
+        with open(current_file) as fin:
             json_data = json.load(fin)
 
-            return RecordData(**json_data)
+        record_data = RecordData(**json_data)
+
+        os.chdir(old_wd)
+
+        return record_data
+
+

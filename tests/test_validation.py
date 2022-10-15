@@ -7,6 +7,7 @@ def test_successful_load():
     This will load the golden standard dataset (which should work) and perform a few additional checks to ensure data
     was included correctly.
     """
+
     record_data = RecordData.load("./tests/data/records.json")
     assert len(record_data.games) > 0
 

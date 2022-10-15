@@ -88,7 +88,8 @@
           "type": "completed",
           "records": [
             {
-              "date": "2022-07-07"
+              "date": "2022-07-07",
+              "screenshot": "./records.json"
             }
           ]
         }

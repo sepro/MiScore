@@ -15,7 +15,7 @@ setuptools.setup(
     project_urls={
         "Bug Tracker": "https://github.com/sepro/MiScore/issues",
     },
-    install_requires=["click>=8.1.3", "pydantic>=1.9.2,<=2.0.0"],
+    install_requires=["click>=8.1.3", "pydantic>=1.9.2,<2.0.0"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

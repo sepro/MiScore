@@ -15,6 +15,14 @@ This is very much a work in progress, here is a rough sketch of the steps planne
   - [X] Work out json schema and Pydantic code to load and validate data
   - [ ] Interface (textual ?) to add data
   - [ ] Front-end (Svelte?) to show result on a static webpage
+  - [ ] 
+## Validating a records file
+
+Once installed you can validate a json file containing records data using the command below
+
+```commandline
+ python -m miscore .\data\records.json
+```
 
 ## Setting up (for developers)
 

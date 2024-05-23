@@ -32,7 +32,7 @@ an environment.
 ```commandline
 python -m venv venv
 activate venv/bin/activate
-pip install -r requirements.txt
+pip install -r docs/dev/requirements.txt
 ```
 
 Now you can run the test suite using

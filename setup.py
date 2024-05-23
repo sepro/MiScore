@@ -1,11 +1,11 @@
-import setuptools
+from setuptools import setup, find_packages
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="miscore",
-    version="0.0.2",
+    version="0.0.3",
     author="Sebastian Proost",
     author_email="sebastian.proost@gmail.com",
     description="Package to manage high scores in JSON format",
@@ -21,6 +21,7 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=["miscore"],
     python_requires=">=3.6",
+    packages=find_packages("src"),
+    package_dir={"": "src"}
 )

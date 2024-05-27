@@ -7,7 +7,7 @@ from typing import List, Optional, Union
 from pydantic import model_validator, BaseModel, Extra, FilePath
 
 
-class CompletedRecordEntry(BaseModel, extra='forbid'):
+class CompletedRecordEntry(BaseModel, extra="forbid"):
     """
     Model for tracking when you completed the game (without anything more)
     """
@@ -70,7 +70,7 @@ class RecordType(BaseModel):
         ]
     ] = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     @classmethod
     def check_record_entry_types(cls, values):
         """
@@ -103,7 +103,7 @@ class Game(BaseModel):
     difficulties: Optional[List[str]] = None
     record_types: Optional[List[RecordType]] = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     @classmethod
     def check_record_entry_difficulty(cls, values):
         """

@@ -4,17 +4,17 @@ from datetime import datetime, timedelta, date
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, root_validator, Extra, FilePath
+from pydantic import model_validator, BaseModel, Extra, FilePath
 
 
-class CompletedRecordEntry(BaseModel, extra=Extra.forbid):
+class CompletedRecordEntry(BaseModel, extra='forbid'):
     """
     Model for tracking when you completed the game (without anything more)
     """
 
     date: Union[date, datetime]
-    description: Optional[str]
-    screenshot: Optional[FilePath]
+    description: Optional[str] = None
+    screenshot: Optional[FilePath] = None
 
 
 class CompletedAtDifficultyRecordEntry(CompletedRecordEntry):
@@ -57,7 +57,7 @@ class RecordType(BaseModel):
     """
 
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     type: RecordTypeOptions
     records: Optional[
         List[
@@ -68,25 +68,26 @@ class RecordType(BaseModel):
                 ScoreRecordEntry,
             ]
         ]
-    ]
+    ] = None
 
-    @root_validator()
+    @model_validator(mode='after')
+    @classmethod
     def check_record_entry_types(cls, values):
         """
         Ensure all entries match the record type.
         """
-        records = values.get("records", [])
+        records = values.records
 
-        if values.get("type") == "completed":
+        if values.type == "completed":
             for r in records:
                 assert isinstance(r, CompletedRecordEntry)
-        elif values.get("type") == "completed_at_difficulty":
+        elif values.type == "completed_at_difficulty":
             for r in records:
                 assert isinstance(r, CompletedAtDifficultyRecordEntry)
-        elif values.get("type") in ["fastest_time", "longest_time"]:
+        elif values.type in ["fastest_time", "longest_time"]:
             for r in records:
                 assert isinstance(r, TimeRecordEntry)
-        elif values.get("type") in ["high_score", "low_score"]:
+        elif values.type in ["high_score", "low_score"]:
             for r in records:
                 assert isinstance(r, ScoreRecordEntry)
 
@@ -99,18 +100,19 @@ class Game(BaseModel):
     """
 
     name: str
-    difficulties: Optional[List[str]]
-    record_types: Optional[List[RecordType]]
+    difficulties: Optional[List[str]] = None
+    record_types: Optional[List[RecordType]] = None
 
-    @root_validator()
+    @model_validator(mode='after')
+    @classmethod
     def check_record_entry_difficulty(cls, values):
         """
         For record where a difficulty needs to be entered, that difficulty needs to be a valid option in this model.
         """
-        difficulties = values.get("difficulties", None)
+        difficulties = values.difficulties
 
         if difficulties is not None:
-            record_types = values.get("record_types", [])
+            record_types = values.record_types
             for rt in record_types:
                 if rt.type == "completed_at_difficulty":
                     for entry in rt.records:

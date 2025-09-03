@@ -153,7 +153,7 @@ class RecordData(BaseModel):
         """
         Save records to a JSON file.
         """
-        with open(filename, 'w') as fout:
+        with open(filename, "w") as fout:
             json.dump(self.model_dump(), fout, indent=2, default=str)
 
     @classmethod
@@ -166,12 +166,12 @@ class RecordData(BaseModel):
         # Check if file exists and load existing data
         if os.path.exists(filename):
             record_data = cls.load(filename)
-            
+
             # Check if game already exists
             for game in record_data.games:
                 if game.name == game_name:
                     return False
-            
+
             # Add new game to existing data
             new_game = Game(name=game_name)
             record_data.games.append(new_game)
@@ -179,12 +179,12 @@ class RecordData(BaseModel):
             # Create new data structure with the game
             new_game = Game(name=game_name)
             record_data = RecordData(games=[new_game])
-        
+
         # Validate the new data structure before saving
         # This will raise an exception if invalid, preventing file corruption
         validated_data = RecordData(**record_data.model_dump())
-        
+
         # Only save if validation passes
         validated_data.save(filename)
-        
+
         return True

@@ -29,7 +29,9 @@ def validate(filename, raise_error):
 @cli.command()
 @click.argument("game_name")
 @click.argument("filename")
-@click.option("--no-interactive", is_flag=True, help="Skip interactive difficulty setup")
+@click.option(
+    "--no-interactive", is_flag=True, help="Skip interactive difficulty setup"
+)
 def add_game(game_name, filename, no_interactive):
     """Add a new game to a records file"""
     try:

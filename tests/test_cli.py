@@ -164,7 +164,9 @@ class TestCLI:
 
         try:
             game_name = "Zelda: Breath of the Wild & The Legend Continues!"
-            result = self.runner.invoke(cli, ["add-game", game_name, temp_filename, "--no-interactive"])
+            result = self.runner.invoke(
+                cli, ["add-game", game_name, temp_filename, "--no-interactive"]
+            )
             assert result.exit_code == 0
             assert f"Game '{game_name}' added" in result.output
 
@@ -181,7 +183,8 @@ class TestCLI:
         """Test error handling in add-game command"""
         # Test with an invalid directory path
         result = self.runner.invoke(
-            cli, ["add-game", "Test Game", "/invalid/path/file.json", "--no-interactive"]
+            cli,
+            ["add-game", "Test Game", "/invalid/path/file.json", "--no-interactive"],
         )
         assert result.exit_code == 0
         assert "Error adding game:" in result.output
@@ -194,7 +197,8 @@ class TestCLI:
         try:
             # Add a game
             add_result = self.runner.invoke(
-                cli, ["add-game", "Workflow Test Game", temp_filename, "--no-interactive"]
+                cli,
+                ["add-game", "Workflow Test Game", temp_filename, "--no-interactive"],
             )
             assert add_result.exit_code == 0
             assert "added" in add_result.output

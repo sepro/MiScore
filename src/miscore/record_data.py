@@ -174,11 +174,19 @@ class RecordData(BaseModel):
                     return False
 
             # Create new game with optional interactive setup
-            new_game = cls._create_game_interactive(game_name) if interactive else Game(name=game_name)
+            new_game = (
+                cls._create_game_interactive(game_name)
+                if interactive
+                else Game(name=game_name)
+            )
             record_data.games.append(new_game)
         else:
             # Create new data structure with the game
-            new_game = cls._create_game_interactive(game_name) if interactive else Game(name=game_name)
+            new_game = (
+                cls._create_game_interactive(game_name)
+                if interactive
+                else Game(name=game_name)
+            )
             record_data = RecordData(games=[new_game])
 
         # Validate the new data structure before saving
@@ -197,19 +205,23 @@ class RecordData(BaseModel):
         """
         print(f"\n📋 Setting up '{game_name}'")
         print("=" * (len(game_name) + 15))
-        
+
         # Ask if the game has difficulty levels
         while True:
-            has_difficulties = input("\n❓ Does this game have difficulty levels? (y/n): ").strip().lower()
-            if has_difficulties in ['y', 'yes']:
+            has_difficulties = (
+                input("\n❓ Does this game have difficulty levels? (y/n): ")
+                .strip()
+                .lower()
+            )
+            if has_difficulties in ["y", "yes"]:
                 difficulties = cls._get_difficulty_levels()
                 break
-            elif has_difficulties in ['n', 'no']:
+            elif has_difficulties in ["n", "no"]:
                 difficulties = None
                 break
             else:
                 print("⚠️  Please enter 'y' for yes or 'n' for no.")
-        
+
         return Game(name=game_name, difficulties=difficulties)
 
     @classmethod
@@ -220,17 +232,21 @@ class RecordData(BaseModel):
         print("\n🎯 Enter difficulty levels (one per line)")
         print("   Press Enter with empty input to finish")
         print("   Examples: Easy, Normal, Hard, Nightmare")
-        
+
         difficulties = []
         while True:
-            print(f"\n   Current difficulties: {difficulties if difficulties else 'None yet'}")
+            print(
+                f"\n   Current difficulties: {difficulties if difficulties else 'None yet'}"
+            )
             difficulty = input("   Enter difficulty level: ").strip()
-            
+
             if not difficulty:
                 if difficulties:
                     break
                 else:
-                    print("   ⚠️  No difficulties added. Press Enter again to skip difficulties.")
+                    print(
+                        "   ⚠️  No difficulties added. Press Enter again to skip difficulties."
+                    )
                     empty_again = input("   Enter difficulty level: ").strip()
                     if not empty_again:
                         return None
@@ -238,11 +254,13 @@ class RecordData(BaseModel):
                         difficulties.append(empty_again)
                         print(f"   ✅ Added '{empty_again}'")
             elif difficulty in difficulties:
-                print(f"   ⚠️  '{difficulty}' is already added. Please enter a different one.")
+                print(
+                    f"   ⚠️  '{difficulty}' is already added. Please enter a different one."
+                )
                 continue
             else:
                 difficulties.append(difficulty)
                 print(f"   ✅ Added '{difficulty}'")
-        
+
         print(f"\n✨ Final difficulty levels: {', '.join(difficulties)}")
         return difficulties

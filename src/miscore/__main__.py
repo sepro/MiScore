@@ -29,10 +29,12 @@ def validate(filename, raise_error):
 @cli.command()
 @click.argument("game_name")
 @click.argument("filename")
-def add_game(game_name, filename):
+@click.option("--no-interactive", is_flag=True, help="Skip interactive difficulty setup")
+def add_game(game_name, filename, no_interactive):
     """Add a new game to a records file"""
     try:
-        if RecordData.add_game_to_file(game_name, filename):
+        interactive = not no_interactive
+        if RecordData.add_game_to_file(game_name, filename, interactive=interactive):
             print(f"Game '{game_name}' added to {filename}")
         else:
             print(f"Game '{game_name}' already exists in {filename}")

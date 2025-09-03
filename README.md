@@ -28,15 +28,27 @@ To create a new records file or add a game to an existing one:
 python -m miscore add-game "Game Name" records.json
 ```
 
+By default, the command will interactively ask if the game has difficulty levels and prompt you to enter them. To skip the interactive setup, use the `--no-interactive` flag:
+
+```commandline
+python -m miscore add-game "Game Name" records.json --no-interactive
+```
+
 **Examples:**
 ```commandline
-# Create a new records file with your first game
+# Create a new records file with interactive difficulty setup
 python -m miscore add-game "Doom (2016)" my_games.json
 
-# Add another game to the existing file
-python -m miscore add-game "Zelda: Breath of the Wild" my_games.json
+# Add a game without interactive prompts (useful for scripts)
+python -m miscore add-game "Simple Puzzle Game" my_games.json --no-interactive
 
+# Add a game with difficulty levels (interactive mode will guide you)
+python -m miscore add-game "Zelda: Breath of the Wild" my_games.json
 ```
+
+During interactive mode, you'll be asked:
+- Whether the game has difficulty levels (y/n)
+- If yes, you can enter each difficulty level (press Enter with empty input to finish)
 
 If the game already exists in the file, you'll get a message saying so and the file won't be modified.
 
@@ -85,5 +97,11 @@ Now you can run the test suite using
 
 ```commandline
 pytest
+```
+
+To run tests with coverage reporting:
+
+```commandline
+pytest --cov=src --cov-report=term-missing
 ```
 

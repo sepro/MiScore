@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, date
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import model_validator, BaseModel, Extra, FilePath
+from pydantic import model_validator, BaseModel, FilePath
 
 
 class CompletedRecordEntry(BaseModel, extra="forbid"):
@@ -111,12 +111,13 @@ class Game(BaseModel):
         """
         difficulties = values.difficulties
 
-        if difficulties is not None:
+        if difficulties is not None and values.record_types is not None:
             record_types = values.record_types
             for rt in record_types:
                 if rt.type == "completed_at_difficulty":
-                    for entry in rt.records:
-                        assert entry.difficulty in difficulties
+                    if rt.records is not None:
+                        for entry in rt.records:
+                            assert entry.difficulty in difficulties
         return values
 
 
@@ -157,7 +158,7 @@ class RecordData(BaseModel):
             json.dump(self.model_dump(), fout, indent=2, default=str)
 
     @classmethod
-    def add_game_to_file(cls, game_name, filename):
+    def add_game_to_file(cls, game_name, filename, interactive=True):
         """
         Add a new game to a JSON file, or create the file if it doesn't exist.
         Validates the data before writing to avoid corruption.
@@ -172,12 +173,12 @@ class RecordData(BaseModel):
                 if game.name == game_name:
                     return False
 
-            # Add new game to existing data
-            new_game = Game(name=game_name)
+            # Create new game with optional interactive setup
+            new_game = cls._create_game_interactive(game_name) if interactive else Game(name=game_name)
             record_data.games.append(new_game)
         else:
             # Create new data structure with the game
-            new_game = Game(name=game_name)
+            new_game = cls._create_game_interactive(game_name) if interactive else Game(name=game_name)
             record_data = RecordData(games=[new_game])
 
         # Validate the new data structure before saving
@@ -188,3 +189,60 @@ class RecordData(BaseModel):
         validated_data.save(filename)
 
         return True
+
+    @classmethod
+    def _create_game_interactive(cls, game_name):
+        """
+        Create a game with interactive prompts for difficulty levels.
+        """
+        print(f"\n📋 Setting up '{game_name}'")
+        print("=" * (len(game_name) + 15))
+        
+        # Ask if the game has difficulty levels
+        while True:
+            has_difficulties = input("\n❓ Does this game have difficulty levels? (y/n): ").strip().lower()
+            if has_difficulties in ['y', 'yes']:
+                difficulties = cls._get_difficulty_levels()
+                break
+            elif has_difficulties in ['n', 'no']:
+                difficulties = None
+                break
+            else:
+                print("⚠️  Please enter 'y' for yes or 'n' for no.")
+        
+        return Game(name=game_name, difficulties=difficulties)
+
+    @classmethod
+    def _get_difficulty_levels(cls):
+        """
+        Interactive prompt to collect difficulty levels from the user.
+        """
+        print("\n🎯 Enter difficulty levels (one per line)")
+        print("   Press Enter with empty input to finish")
+        print("   Examples: Easy, Normal, Hard, Nightmare")
+        
+        difficulties = []
+        while True:
+            print(f"\n   Current difficulties: {difficulties if difficulties else 'None yet'}")
+            difficulty = input("   Enter difficulty level: ").strip()
+            
+            if not difficulty:
+                if difficulties:
+                    break
+                else:
+                    print("   ⚠️  No difficulties added. Press Enter again to skip difficulties.")
+                    empty_again = input("   Enter difficulty level: ").strip()
+                    if not empty_again:
+                        return None
+                    else:
+                        difficulties.append(empty_again)
+                        print(f"   ✅ Added '{empty_again}'")
+            elif difficulty in difficulties:
+                print(f"   ⚠️  '{difficulty}' is already added. Please enter a different one.")
+                continue
+            else:
+                difficulties.append(difficulty)
+                print(f"   ✅ Added '{difficulty}'")
+        
+        print(f"\n✨ Final difficulty levels: {', '.join(difficulties)}")
+        return difficulties

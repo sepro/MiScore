@@ -16,12 +16,58 @@ This is very much a work in progress, here is a rough sketch of the steps planne
   - [ ] Interface (textual ?) to add data
   - [ ] Front-end (Svelte?) to show result on a static webpage
 
-## Validating a records file
+## Using MiScore
 
-Once installed you can validate a json file containing records data using the command below
+MiScore provides a command-line interface for managing your gaming records.
+
+### Adding Games
+
+To create a new records file or add a game to an existing one:
 
 ```commandline
- python -m miscore .\data\records.json
+python -m miscore add-game "Game Name" records.json
+```
+
+**Examples:**
+```commandline
+# Create a new records file with your first game
+python -m miscore add-game "Doom (2016)" my_games.json
+
+# Add another game to the existing file
+python -m miscore add-game "Zelda: Breath of the Wild" my_games.json
+
+```
+
+If the game already exists in the file, you'll get a message saying so and the file won't be modified.
+
+### Validating a records file
+
+You can validate a json file containing records data using:
+
+```commandline
+python -m miscore validate records.json
+```
+
+**Examples:**
+```commandline
+# Validate your records file
+python -m miscore validate my_games.json
+
+# Validate and see detailed error information
+python -m miscore validate my_games.json --raise_error
+```
+
+### Getting Help
+
+For more information about available commands:
+
+```commandline
+# See all available commands
+python -m miscore --help
+
+# Get help for a specific command
+python -m miscore add-game --help
+python -m miscore validate --help
 ```
 
 ## Setting up (for developers)

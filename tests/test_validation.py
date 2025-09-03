@@ -159,8 +159,8 @@ class TestInteractiveMode:
         assert not os.path.exists(temp_filename)
 
         try:
-            # Mock user input: yes for difficulties, then Easy, Hard, empty to finish
-            user_inputs = ["y", "Easy", "Hard", ""]
+            # Mock user input: yes for difficulties, then Easy, Hard, empty to finish, no record types
+            user_inputs = ["y", "Easy", "Hard", "", "n"]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):  # Suppress print output during tests
                     result = RecordData.add_game_to_file(
@@ -189,8 +189,8 @@ class TestInteractiveMode:
         assert not os.path.exists(temp_filename)
 
         try:
-            # Mock user input: no for difficulties
-            user_inputs = ["n"]
+            # Mock user input: no for difficulties, no record types
+            user_inputs = ["n", "n"]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):
                     result = RecordData.add_game_to_file(
@@ -219,8 +219,8 @@ class TestInteractiveMode:
         assert not os.path.exists(temp_filename)
 
         try:
-            # Mock user input: yes, Normal, Normal (duplicate), Hard, empty to finish
-            user_inputs = ["y", "Normal", "Normal", "Hard", ""]
+            # Mock user input: yes, Normal, Normal (duplicate), Hard, empty to finish, no record types
+            user_inputs = ["y", "Normal", "Normal", "Hard", "", "n"]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):
                     result = RecordData.add_game_to_file(
@@ -247,8 +247,8 @@ class TestInteractiveMode:
         assert not os.path.exists(temp_filename)
 
         try:
-            # Mock user input: invalid responses, then valid 'yes', then difficulties
-            user_inputs = ["maybe", "invalid", "yes", "Easy", ""]
+            # Mock user input: invalid responses, then valid 'yes', then difficulties, no record types
+            user_inputs = ["maybe", "invalid", "yes", "Easy", "", "n"]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):
                     result = RecordData.add_game_to_file(
@@ -275,8 +275,8 @@ class TestInteractiveMode:
         assert not os.path.exists(temp_filename)
 
         try:
-            # Mock user input: yes, empty (no difficulties yet), then add one, empty again to finish
-            user_inputs = ["y", "", "Medium", ""]
+            # Mock user input: yes, empty (no difficulties yet), then add one, empty again to finish, no record types
+            user_inputs = ["y", "", "Medium", "", "n"]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):
                     result = RecordData.add_game_to_file(
@@ -303,8 +303,8 @@ class TestInteractiveMode:
         assert not os.path.exists(temp_filename)
 
         try:
-            # Mock user input: yes, empty twice to skip difficulties
-            user_inputs = ["y", "", ""]
+            # Mock user input: yes, empty twice to skip difficulties, no record types
+            user_inputs = ["y", "", "", "n"]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):
                     result = RecordData.add_game_to_file(
@@ -317,6 +317,276 @@ class TestInteractiveMode:
             loaded_data = RecordData.load(temp_filename)
             game = loaded_data.games[0]
             assert game.difficulties is None
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_game_with_record_types(self):
+        """Test creating a game with record types through interactive prompts"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, yes record types, add high_score and completed
+            user_inputs = [
+                "n",
+                "y",
+                "5",
+                "My High Score",
+                "Track highest score",
+                "1",
+                "",
+                "First completion",
+                "",
+            ]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify the game was created with correct record types
+            loaded_data = RecordData.load(temp_filename)
+            assert len(loaded_data.games) == 1
+            game = loaded_data.games[0]
+            assert game.name == "Test Game"
+            assert game.difficulties is None
+            assert len(game.record_types) == 2
+
+            # Check first record type (high_score)
+            high_score_rt = next(
+                rt for rt in game.record_types if rt.type == "high_score"
+            )
+            assert high_score_rt.name == "My High Score"
+            assert high_score_rt.description == "Track highest score"
+            assert high_score_rt.records == []
+
+            # Check second record type (completed)
+            completed_rt = next(
+                rt for rt in game.record_types if rt.type == "completed"
+            )
+            assert completed_rt.name == "Game Completion"  # Default name
+            assert completed_rt.description == "First completion"
+            assert completed_rt.records == []
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_game_no_record_types(self):
+        """Test creating a game without record types"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, no record types
+            user_inputs = ["n", "n"]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify the game was created without record types
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert game.record_types is None
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_completed_at_difficulty_validation(self):
+        """Test that completed_at_difficulty requires difficulty levels"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, yes record types, try completed_at_difficulty (should fail), then completed
+            user_inputs = ["n", "y", "2", "1", "", "Basic completion", ""]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify only the valid record type was added
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert len(game.record_types) == 1
+            assert game.record_types[0].type == "completed"
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_duplicate_record_type_handling(self):
+        """Test handling of duplicate record type selections"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, yes record types, add high_score twice, then fastest_time
+            user_inputs = [
+                "n",
+                "y",
+                "5",
+                "First High Score",
+                "",
+                "5",
+                "3",
+                "Speed Run",
+                "My fastest runs",
+                "",
+            ]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify only unique record types were added
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert len(game.record_types) == 2
+            types = [rt.type for rt in game.record_types]
+            assert "high_score" in types
+            assert "fastest_time" in types
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_invalid_record_type_choices(self):
+        """Test handling of invalid record type number choices"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, yes record types, invalid choices, then valid choice
+            user_inputs = ["n", "y", "0", "7", "invalid", "1", "", "", ""]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify the valid record type was added
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert len(game.record_types) == 1
+            assert game.record_types[0].type == "completed"
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_skip_record_types_with_double_empty(self):
+        """Test skipping record types by pressing enter twice"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, yes record types, empty twice to skip
+            user_inputs = ["n", "y", "", ""]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify no record types were added
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert game.record_types is None
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_invalid_record_type_yes_no_responses(self):
+        """Test handling of invalid responses to record type yes/no question"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, invalid responses for record types, then no
+            user_inputs = ["n", "maybe", "invalid", "no"]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify the game was created without record types
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert game.record_types is None
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_interactive_empty_then_record_type_choice(self):
+        """Test handling empty input followed by actual record type choice"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as temp_file:
+            temp_filename = temp_file.name
+
+        # File should not exist at this point
+        assert not os.path.exists(temp_filename)
+
+        try:
+            # Mock user input: no difficulties, yes record types, empty (no types yet), then add one
+            user_inputs = ["n", "y", "", "1", "", "", ""]
+            with patch("builtins.input", side_effect=user_inputs):
+                with patch("builtins.print"):
+                    result = RecordData.add_game_to_file(
+                        "Test Game", temp_filename, interactive=True
+                    )
+
+            assert result is True
+
+            # Verify the record type was added
+            loaded_data = RecordData.load(temp_filename)
+            game = loaded_data.games[0]
+            assert len(game.record_types) == 1
+            assert game.record_types[0].type == "completed"
 
         finally:
             if os.path.exists(temp_filename):

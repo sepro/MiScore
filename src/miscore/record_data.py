@@ -201,7 +201,7 @@ class RecordData(BaseModel):
     @classmethod
     def _create_game_interactive(cls, game_name):
         """
-        Create a game with interactive prompts for difficulty levels.
+        Create a game with interactive prompts for difficulty levels and record types.
         """
         print(f"\n📋 Setting up '{game_name}'")
         print("=" * (len(game_name) + 15))
@@ -222,7 +222,23 @@ class RecordData(BaseModel):
             else:
                 print("⚠️  Please enter 'y' for yes or 'n' for no.")
 
-        return Game(name=game_name, difficulties=difficulties)
+        # Ask if the user wants to add record types
+        while True:
+            has_record_types = (
+                input("\n❓ Do you want to add record types? (y/n): ").strip().lower()
+            )
+            if has_record_types in ["y", "yes"]:
+                record_types = cls._get_record_types(difficulties)
+                break
+            elif has_record_types in ["n", "no"]:
+                record_types = None
+                break
+            else:
+                print("⚠️  Please enter 'y' for yes or 'n' for no.")
+
+        return Game(
+            name=game_name, difficulties=difficulties, record_types=record_types
+        )
 
     @classmethod
     def _get_difficulty_levels(cls):
@@ -264,3 +280,117 @@ class RecordData(BaseModel):
 
         print(f"\n✨ Final difficulty levels: {', '.join(difficulties)}")
         return difficulties
+
+    @classmethod
+    def _get_record_types(cls, difficulties):
+        """
+        Interactive prompt to collect record types from the user.
+        """
+        print("\n🏆 Setting up record types")
+        print("   Available record types:")
+        print("   1. completed - Track when you completed the game")
+        print(
+            "   2. completed_at_difficulty - Track completions at specific difficulties"
+        )
+        print("   3. fastest_time - Track your best speed runs")
+        print("   4. longest_time - Track your longest playthroughs")
+        print("   5. high_score - Track your highest scores")
+        print("   6. low_score - Track your lowest scores (for golf-style games)")
+        print("\n   Press Enter with empty input to finish adding record types")
+
+        record_types = []
+        available_types = {
+            "1": "completed",
+            "2": "completed_at_difficulty",
+            "3": "fastest_time",
+            "4": "longest_time",
+            "5": "high_score",
+            "6": "low_score",
+        }
+
+        used_types = set()
+
+        while True:
+            print(
+                f"\n   Current record types: {[rt.name for rt in record_types] if record_types else 'None yet'}"
+            )
+            choice = input("   Enter record type number (1-6): ").strip()
+
+            if not choice:
+                if record_types:
+                    break
+                else:
+                    print(
+                        "   ⚠️  No record types added. Press Enter again to skip record types."
+                    )
+                    empty_again = input("   Enter record type number (1-6): ").strip()
+                    if not empty_again:
+                        return None
+                    else:
+                        choice = empty_again
+
+            if choice not in available_types:
+                print("   ⚠️  Please enter a number between 1-6.")
+                continue
+
+            record_type_key = available_types[choice]
+
+            if record_type_key in used_types:
+                print(f"   ⚠️  Record type '{record_type_key}' is already added.")
+                continue
+
+            # Validate difficulty requirement
+            if record_type_key == "completed_at_difficulty" and not difficulties:
+                print(
+                    "   ⚠️  'completed_at_difficulty' requires the game to have difficulty levels."
+                )
+                continue
+
+            used_types.add(record_type_key)
+
+            # Get name and description for the record type
+            name = cls._get_record_type_name(record_type_key)
+            description = cls._get_record_type_description()
+
+            record_type = RecordType(
+                name=name, description=description, type=record_type_key, records=[]
+            )
+
+            record_types.append(record_type)
+            print(f"   ✅ Added '{name}' ({record_type_key})")
+
+        print(
+            f"\n✨ Final record types: {[f'{rt.name} ({rt.type})' for rt in record_types]}"
+        )
+        return record_types
+
+    @classmethod
+    def _get_record_type_name(cls, record_type_key):
+        """
+        Get a custom name for the record type.
+        """
+        default_names = {
+            "completed": "Game Completion",
+            "completed_at_difficulty": "Difficulty Completion",
+            "fastest_time": "Speed Run",
+            "longest_time": "Marathon Run",
+            "high_score": "High Score",
+            "low_score": "Low Score",
+        }
+
+        default_name = default_names.get(
+            record_type_key, record_type_key.replace("_", " ").title()
+        )
+        name = input(
+            f"   📝 Enter name for this record type (default: {default_name}): "
+        ).strip()
+
+        return name if name else default_name
+
+    @classmethod
+    def _get_record_type_description(cls):
+        """
+        Get an optional description for the record type.
+        """
+        description = input("   📄 Enter description (optional): ").strip()
+        return description if description else None

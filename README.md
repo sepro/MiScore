@@ -47,8 +47,18 @@ python -m miscore add-game "Zelda: Breath of the Wild" my_games.json
 ```
 
 During interactive mode, you'll be asked:
-- Whether the game has difficulty levels (y/n)
-- If yes, you can enter each difficulty level (press Enter with empty input to finish)
+- **Difficulty levels**: Whether the game has difficulty levels (y/n)
+  - If yes, you can enter each difficulty level (press Enter with empty input to finish)
+- **Record types**: Whether you want to add record types (y/n)
+  - If yes, choose from 6 available types:
+    1. **completed** - Track when you completed the game
+    2. **completed_at_difficulty** - Track completions at specific difficulties (requires difficulty levels)
+    3. **fastest_time** - Track your best speed runs
+    4. **longest_time** - Track your longest playthroughs
+    5. **high_score** - Track your highest scores
+    6. **low_score** - Track your lowest scores (for golf-style games)
+  - For each record type, you can customize the name and add an optional description
+  - Press Enter with empty input to finish adding record types
 
 If the game already exists in the file, you'll get a message saying so and the file won't be modified.
 
@@ -82,26 +92,7 @@ python -m miscore add-game --help
 python -m miscore validate --help
 ```
 
-## Setting up (for developers)
+## Development
 
-After cloning the repository, navigate into the MiScore directory and run the command below to create and activate
-an environment.
-
-```commandline
-python -m venv venv
-activate venv/bin/activate
-pip install -r docs/dev/requirements.txt
-```
-
-Now you can run the test suite using
-
-```commandline
-pytest
-```
-
-To run tests with coverage reporting:
-
-```commandline
-pytest --cov=src --cov-report=term-missing
-```
+For developers who want to contribute to MiScore, please see the [Development Guide](docs/development.md) for setup instructions, testing guidelines, and code structure information.
 

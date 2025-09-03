@@ -4,6 +4,9 @@ import os
 import tempfile
 import json
 
+# Get the test data directory path
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+
 
 def test_successful_load():
     """
@@ -11,13 +14,13 @@ def test_successful_load():
     was included correctly.
     """
 
-    record_data = RecordData.load("./tests/data/records.json")
+    record_data = RecordData.load(os.path.join(TEST_DATA_DIR, "records.json"))
     assert len(record_data.games) > 0
 
 
 def test_failed_load():
     with pytest.raises(Exception):
-        _ = RecordData.load("./tests/data/invalid.json")
+        _ = RecordData.load(os.path.join(TEST_DATA_DIR, "invalid.json"))
 
 
 def test_save_method():

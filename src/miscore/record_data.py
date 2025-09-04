@@ -558,9 +558,7 @@ class RecordData(BaseModel):
                     print(f"✅ Selected: {selected_rt.name} ({selected_rt.type.value})")
                     return selected_rt
                 else:
-                    print(
-                        f"⚠️  Please enter a number between 1 and {len(record_types)}"
-                    )
+                    print(f"⚠️  Please enter a number between 1 and {len(record_types)}")
 
             except ValueError:
                 print("⚠️  Please enter a valid number or 'q' to quit")

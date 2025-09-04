@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="miscore",
-    version="0.0.4",
+    version="1.0.0",
     author="Sebastian Proost",
     author_email="sebastian.proost@gmail.com",
     description="Package to manage high scores in JSON format",

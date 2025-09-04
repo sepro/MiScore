@@ -231,3 +231,58 @@ class TestCLI:
         result = self.runner.invoke(cli, ["invalid-command"])
         assert result.exit_code != 0
         assert "No such command" in result.output
+
+    def test_add_record_help(self):
+        """Test add-record command help"""
+        result = self.runner.invoke(cli, ["add-record", "--help"])
+        assert result.exit_code == 0
+        assert "Add a new record entry to a game" in result.output
+        assert "FILENAME" in result.output
+        assert "--no-interactive" in result.output
+
+    def test_add_record_nonexistent_file(self):
+        """Test add-record with non-existent file"""
+        result = self.runner.invoke(cli, ["add-record", "nonexistent.json"])
+        assert result.exit_code == 0
+        assert "does not exist" in result.output
+
+    def test_add_record_no_games(self):
+        """Test add-record with file containing no games"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            # Create empty records file
+            empty_data = RecordData(games=[])
+            empty_data.save(temp_filename)
+
+            result = self.runner.invoke(cli, ["add-record", temp_filename])
+            assert result.exit_code == 0
+            assert "No games found" in result.output
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_add_record_no_interactive_not_implemented(self):
+        """Test add-record with --no-interactive flag"""
+        result = self.runner.invoke(
+            cli,
+            [
+                "add-record",
+                os.path.join(TEST_DATA_DIR, "records.json"),
+                "--no-interactive",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Non-interactive mode not yet implemented" in result.output
+
+    def test_add_record_user_cancellation(self):
+        """Test add-record with user cancelling during game selection"""
+        result = self.runner.invoke(
+            cli,
+            ["add-record", os.path.join(TEST_DATA_DIR, "records.json")],
+            input="q\n",
+        )
+        assert result.exit_code == 0
+        assert "Cancelled by user" in result.output

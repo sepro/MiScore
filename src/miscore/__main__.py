@@ -44,5 +44,20 @@ def add_game(game_name, filename, no_interactive):
         print(f"Error adding game: {e}")
 
 
+@cli.command()
+@click.argument("filename")
+@click.option("--no-interactive", is_flag=True, help="Skip interactive prompts")
+def add_record(filename, no_interactive):
+    """Add a new record entry to a game"""
+    try:
+        interactive = not no_interactive
+        if RecordData.add_record_to_file(filename, interactive=interactive):
+            print(f"Record successfully added to {filename}")
+        else:
+            print("Record addition was cancelled or failed")
+    except Exception as e:
+        print(f"Error adding record: {e}")
+
+
 if __name__ == "__main__":
     cli()

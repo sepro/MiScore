@@ -62,6 +62,45 @@ During interactive mode, you'll be asked:
 
 If the game already exists in the file, you'll get a message saying so and the file won't be modified.
 
+### Adding Records
+
+Once you have games with record types configured, you can add records to track your achievements:
+
+```commandline
+python -m miscore add-record records.json
+```
+
+The command will guide you through an interactive process:
+
+1. **Game Selection**: Choose which game to add a record for
+2. **Record Type Selection**: Choose which type of record to add
+3. **Record Details**: Enter the specific information based on the record type
+
+**Examples:**
+```commandline
+# Add a record to your games file
+python -m miscore add-record my_games.json
+
+# Add a record using just the filename (works in current directory)
+python -m miscore add-record records.json
+```
+
+**Record Information Collected:**
+- **Date**: When the achievement occurred (defaults to today, format: YYYY-MM-DD)
+- **Description**: Optional description of the achievement
+- **Screenshot**: Optional path to a screenshot file (relative to the JSON file location)
+- **Type-specific fields**:
+  - **Difficulty**: For `completed_at_difficulty` records, select from the game's difficulty levels
+  - **Time**: For `fastest_time`/`longest_time` records, enter time in various formats:
+    - `HH:MM:SS` (e.g., `1:23:45`)
+    - `MM:SS` (e.g., `23:45`)
+    - Human-readable (e.g., `1h30m45s`, `90m`, `5400s`)
+  - **Score**: For `high_score`/`low_score` records, enter a numeric value
+
+You can cancel at any step by typing `q` and pressing Enter.
+
+**Note**: The `add-record` command currently only supports interactive mode. You must have at least one game with configured record types before you can add records.
+
 ### Validating a records file
 
 You can validate a json file containing records data using:
@@ -89,6 +128,7 @@ python -m miscore --help
 
 # Get help for a specific command
 python -m miscore add-game --help
+python -m miscore add-record --help
 python -m miscore validate --help
 ```
 

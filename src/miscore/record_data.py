@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime, timedelta, date
 from enum import Enum
 from typing import List, Optional, Union
@@ -139,14 +140,19 @@ class RecordData(BaseModel):
         old_wd = os.getcwd()
         current_directory = os.path.dirname(filename)
         current_file = os.path.basename(filename)
-        os.chdir(current_directory)
+
+        # Only change directory if there's actually a directory specified
+        if current_directory:
+            os.chdir(current_directory)
 
         with open(current_file) as fin:
             json_data = json.load(fin)
 
         record_data = RecordData(**json_data)
 
-        os.chdir(old_wd)
+        # Only restore directory if we changed it
+        if current_directory:
+            os.chdir(old_wd)
 
         return record_data
 
@@ -394,3 +400,400 @@ class RecordData(BaseModel):
         """
         description = input("   📄 Enter description (optional): ").strip()
         return description if description else None
+
+    @classmethod
+    def add_record_to_file(cls, filename, interactive=True):
+        """
+        Add a new record entry to a game in the JSON file.
+        Returns True if record was added, False if cancelled/failed.
+        """
+        if not os.path.exists(filename):
+            print(
+                f"❌ File '{filename}' does not exist. Please create it first using 'add-game'."
+            )
+            return False
+
+        try:
+            record_data = cls.load(filename)
+        except Exception as e:
+            print(f"❌ Error loading file: {e}")
+            return False
+
+        if not record_data.games:
+            print(
+                "❌ No games found in the file. Please add a game first using 'add-game'."
+            )
+            return False
+
+        if not interactive:
+            print("❌ Non-interactive mode not yet implemented for add-record.")
+            return False
+
+        print(f"\n🎮 Adding record to '{filename}'")
+        print("=" * (len(filename) + 20))
+
+        # Step 1: Select game
+        selected_game = cls._select_game_interactive(record_data.games)
+        if not selected_game:
+            return False
+
+        # Step 2: Select record type
+        if not selected_game.record_types:
+            print(f"\n❌ Game '{selected_game.name}' has no record types configured.")
+            print(
+                "   Please add record types first using 'add-game' in interactive mode."
+            )
+            return False
+
+        selected_record_type = cls._select_record_type_interactive(selected_game)
+        if not selected_record_type:
+            return False
+
+        # Step 3: Collect record details
+        record_details = cls._collect_record_details_interactive(
+            selected_record_type, selected_game, filename
+        )
+        if not record_details:
+            return False
+
+        # Step 4: Create and add the record (maintain working directory context for FilePath validation)
+        old_wd = os.getcwd()
+        current_directory = os.path.dirname(os.path.abspath(filename))
+        if current_directory:
+            os.chdir(current_directory)
+
+        try:
+            new_record = cls._create_record_entry(
+                selected_record_type.type.value, record_details
+            )
+
+            # Add the record to the selected record type
+            if selected_record_type.records is None:
+                selected_record_type.records = []
+            selected_record_type.records.append(new_record)
+
+            # Validate and save
+            validated_data = RecordData(**record_data.model_dump())
+            validated_data.save(
+                os.path.basename(filename) if current_directory else filename
+            )
+
+            print(
+                f"\n✅ Record added successfully to '{selected_game.name}' - '{selected_record_type.name}'!"
+            )
+            return True
+
+        except Exception as e:
+            print(f"\n❌ Error creating record: {e}")
+            return False
+        finally:
+            if current_directory:
+                os.chdir(old_wd)
+
+    @classmethod
+    def _select_game_interactive(cls, games):
+        """Present game selection interface"""
+        print(f"\n🎯 Select a game ({len(games)} available):")
+        for i, game in enumerate(games, 1):
+            record_count = sum(
+                len(rt.records or []) for rt in (game.record_types or [])
+            )
+            print(f"   {i}. {game.name} ({record_count} records)")
+
+        while True:
+            try:
+                choice = (
+                    input(f"\nEnter game number (1-{len(games)}) or 'q' to quit: ")
+                    .strip()
+                    .lower()
+                )
+
+                if choice == "q":
+                    print("Cancelled by user.")
+                    return None
+
+                game_index = int(choice) - 1
+                if 0 <= game_index < len(games):
+                    selected_game = games[game_index]
+                    print(f"✅ Selected: {selected_game.name}")
+                    return selected_game
+                else:
+                    print(f"⚠️  Please enter a number between 1 and {len(games)}")
+
+            except ValueError:
+                print("⚠️  Please enter a valid number or 'q' to quit")
+
+    @classmethod
+    def _select_record_type_interactive(cls, game):
+        """Present record type selection interface"""
+        record_types = game.record_types
+        print(
+            f"\n🏆 Select record type for '{game.name}' ({len(record_types)} available):"
+        )
+
+        for i, rt in enumerate(record_types, 1):
+            record_count = len(rt.records or [])
+            description = f" - {rt.description}" if rt.description else ""
+            print(
+                f"   {i}. {rt.name} ({rt.type.value}){description} [{record_count} records]"
+            )
+
+        while True:
+            try:
+                choice = (
+                    input(
+                        f"\nEnter record type number (1-{len(record_types)}) or 'q' to quit: "
+                    )
+                    .strip()
+                    .lower()
+                )
+
+                if choice == "q":
+                    print("Cancelled by user.")
+                    return None
+
+                rt_index = int(choice) - 1
+                if 0 <= rt_index < len(record_types):
+                    selected_rt = record_types[rt_index]
+                    print(f"✅ Selected: {selected_rt.name} ({selected_rt.type.value})")
+                    return selected_rt
+                else:
+                    print(
+                        f"⚠️  Please enter a number between 1 and {len(record_types)}"
+                    )
+
+            except ValueError:
+                print("⚠️  Please enter a valid number or 'q' to quit")
+
+    @classmethod
+    def _collect_record_details_interactive(cls, record_type, game, filename):
+        """Collect record details based on record type"""
+        details = {}
+
+        print(f"\n📝 Enter details for '{record_type.name}' record:")
+
+        # Get date (all record types)
+        details["date"] = cls._get_date_input()
+        if details["date"] is None:
+            return None
+
+        # Get description (optional for all)
+        details["description"] = cls._get_optional_description()
+
+        # Get screenshot (optional for all)
+        details["screenshot"] = cls._get_optional_screenshot(filename)
+
+        # Get type-specific fields
+        if record_type.type == "completed_at_difficulty":
+            details["difficulty"] = cls._get_difficulty_input(game)
+            if details["difficulty"] is None:
+                return None
+        elif record_type.type in ["fastest_time", "longest_time"]:
+            details["time"] = cls._get_time_input(record_type.type)
+            if details["time"] is None:
+                return None
+        elif record_type.type in ["high_score", "low_score"]:
+            details["score"] = cls._get_score_input(record_type.type)
+            if details["score"] is None:
+                return None
+
+        return details
+
+    @classmethod
+    def _create_record_entry(cls, record_type, details):
+        """Create appropriate record entry model"""
+        base_data = {
+            "date": details["date"],
+            "description": details.get("description"),
+            "screenshot": details.get("screenshot"),
+        }
+
+        if record_type == "completed":
+            return CompletedRecordEntry(**base_data)
+        elif record_type == "completed_at_difficulty":
+            return CompletedAtDifficultyRecordEntry(
+                **base_data, difficulty=details["difficulty"]
+            )
+        elif record_type in ["fastest_time", "longest_time"]:
+            return TimeRecordEntry(**base_data, time=details["time"])
+        elif record_type in ["high_score", "low_score"]:
+            return ScoreRecordEntry(**base_data, score=details["score"])
+        else:
+            raise ValueError(f"Unknown record type: {record_type}")
+
+    @classmethod
+    def _get_date_input(cls):
+        """Get date input from user with smart defaults"""
+        today = date.today().strftime("%Y-%m-%d")
+        print(f"📅 Date (default: {today}, format: YYYY-MM-DD):")
+
+        while True:
+            date_input = input("   Enter date or press Enter for today: ").strip()
+
+            if not date_input:
+                return date.today()
+
+            if date_input.lower() == "q":
+                return None
+
+            # Try to parse the date
+            try:
+                parsed_date = datetime.strptime(date_input, "%Y-%m-%d").date()
+                return parsed_date
+            except ValueError:
+                print(
+                    "   ⚠️  Invalid date format. Please use YYYY-MM-DD or press Enter for today"
+                )
+
+    @classmethod
+    def _get_optional_description(cls):
+        """Get optional description"""
+        description = input("📝 Description (optional): ").strip()
+        return description if description else None
+
+    @classmethod
+    def _get_optional_screenshot(cls, json_filename):
+        """Get optional screenshot path (relative to JSON file)"""
+        screenshot_path = input(
+            "📸 Screenshot path (optional, relative to JSON file): "
+        ).strip()
+
+        if not screenshot_path:
+            return None
+
+        # Check if file exists relative to JSON file directory
+        json_dir = os.path.dirname(os.path.abspath(json_filename))
+        full_path = os.path.join(json_dir, screenshot_path)
+
+        if not os.path.exists(full_path):
+            print(f"   ⚠️  Warning: File '{full_path}' does not exist")
+            confirm = input("   Continue anyway? (y/n): ").strip().lower()
+            if confirm not in ["y", "yes"]:
+                return cls._get_optional_screenshot(json_filename)
+
+        return screenshot_path
+
+    @classmethod
+    def _get_difficulty_input(cls, game):
+        """Get difficulty selection for completed_at_difficulty records"""
+        if not game.difficulties:
+            print("❌ This game has no difficulty levels configured.")
+            return None
+
+        print(f"🎯 Select difficulty ({len(game.difficulties)} available):")
+        for i, difficulty in enumerate(game.difficulties, 1):
+            print(f"   {i}. {difficulty}")
+
+        while True:
+            try:
+                choice = (
+                    input(
+                        f"Enter difficulty number (1-{len(game.difficulties)}) or 'q' to quit: "
+                    )
+                    .strip()
+                    .lower()
+                )
+
+                if choice == "q":
+                    return None
+
+                diff_index = int(choice) - 1
+                if 0 <= diff_index < len(game.difficulties):
+                    selected_difficulty = game.difficulties[diff_index]
+                    print(f"✅ Selected difficulty: {selected_difficulty}")
+                    return selected_difficulty
+                else:
+                    print(
+                        f"⚠️  Please enter a number between 1 and {len(game.difficulties)}"
+                    )
+
+            except ValueError:
+                print("⚠️  Please enter a valid number or 'q' to quit")
+
+    @classmethod
+    def _get_time_input(cls, record_type):
+        """Get time input with flexible format parsing"""
+        type_name = "fastest" if record_type == "fastest_time" else "longest"
+        print(f"⏱️  Enter {type_name} time:")
+        print("   Formats: HH:MM:SS, MM:SS, 1h30m45s, 90m, 5400s")
+
+        while True:
+            time_input = input("   Time: ").strip()
+
+            if time_input.lower() == "q":
+                return None
+
+            if not time_input:
+                print("   ⚠️  Time is required for time-based records")
+                continue
+
+            try:
+                parsed_time = cls._parse_time_input(time_input)
+                # Format back to HH:MM:SS for display
+                total_seconds = int(parsed_time.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                seconds = total_seconds % 60
+                formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                print(f"✅ Parsed time: {formatted_time}")
+                return parsed_time
+            except ValueError as e:
+                print(f"   ⚠️  {e}")
+
+    @classmethod
+    def _parse_time_input(cls, time_input):
+        """Parse various time input formats to timedelta"""
+        time_input = time_input.strip()
+
+        # Try HH:MM:SS format
+        if re.match(r"^\d{1,2}:\d{2}:\d{2}$", time_input):
+            parts = time_input.split(":")
+            hours, minutes, seconds = int(parts[0]), int(parts[1]), int(parts[2])
+            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+        # Try MM:SS format
+        if re.match(r"^\d{1,3}:\d{2}$", time_input):
+            parts = time_input.split(":")
+            minutes, seconds = int(parts[0]), int(parts[1])
+            return timedelta(minutes=minutes, seconds=seconds)
+
+        # Try human readable format (1h30m45s, 90m, 5400s)
+        pattern = r"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?"
+        match = re.match(pattern + "$", time_input.lower())
+
+        if match and any(match.groups()):
+            hours = int(match.group(1)) if match.group(1) else 0
+            minutes = int(match.group(2)) if match.group(2) else 0
+            seconds = int(match.group(3)) if match.group(3) else 0
+            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+        # Try pure seconds
+        if re.match(r"^\d+$", time_input):
+            return timedelta(seconds=int(time_input))
+
+        raise ValueError(
+            f"Invalid time format: '{time_input}'. Use HH:MM:SS, MM:SS, 1h30m45s, 90m, or 5400s"
+        )
+
+    @classmethod
+    def _get_score_input(cls, record_type):
+        """Get score input (numeric)"""
+        type_name = "highest" if record_type == "high_score" else "lowest"
+        print(f"🎯 Enter {type_name} score (number):")
+
+        while True:
+            score_input = input("   Score: ").strip()
+
+            if score_input.lower() == "q":
+                return None
+
+            if not score_input:
+                print("   ⚠️  Score is required for score-based records")
+                continue
+
+            try:
+                score = float(score_input)
+                print(f"✅ Score: {score}")
+                return score
+            except ValueError:
+                print("   ⚠️  Please enter a valid number")

@@ -1,4 +1,5 @@
 from miscore import RecordData, Game
+from miscore.record_data import RecordType
 import pytest
 import os
 import tempfile
@@ -1194,3 +1195,138 @@ class TestAddRecord:
         finally:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)
+
+
+class TestInteractiveInputValidation:
+    """Test coverage for interactive input validation errors"""
+
+    def test_invalid_game_selection_out_of_range(self, monkeypatch, capsys):
+        """Test game selection with out-of-range numbers (covers record_data.py:521-522)"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            # Create file with multiple games
+            games = [
+                Game(name="Game 1", difficulties=[], record_types=[]),
+                Game(name="Game 2", difficulties=[], record_types=[])
+            ]
+            test_data = RecordData(games=games)
+            test_data.save(temp_filename)
+
+            # Mock input: try invalid numbers, then valid selection, then quit
+            inputs = ["0", "3", "99", "q"]
+            input_iter = iter(inputs)
+            monkeypatch.setattr('builtins.input', lambda _: next(input_iter))
+
+            result = RecordData.add_record_to_file(temp_filename, interactive=True)
+            assert result is False  # Should return False when user quits
+
+            captured = capsys.readouterr()
+            assert "Please enter a number between 1 and 2" in captured.out
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_invalid_game_selection_non_numeric(self, monkeypatch, capsys):
+        """Test game selection with non-numeric input (covers record_data.py:523-524)"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            # Create file with games
+            games = [Game(name="Test Game", difficulties=[], record_types=[])]
+            test_data = RecordData(games=games)
+            test_data.save(temp_filename)
+
+            # Mock input: try non-numeric inputs, then quit
+            inputs = ["abc", "1.5", "!", "q"]
+            input_iter = iter(inputs)
+            monkeypatch.setattr('builtins.input', lambda _: next(input_iter))
+
+            result = RecordData.add_record_to_file(temp_filename, interactive=True)
+            assert result is False
+
+            captured = capsys.readouterr()
+            assert "Please enter a valid number or 'q' to quit" in captured.out
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_invalid_record_type_selection_out_of_range(self, monkeypatch, capsys):
+        """Test record type selection with out-of-range numbers (covers record_data.py:561-562)"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            # Create game with multiple record types
+            record_types = [
+                RecordType(name="Type 1", type="completed", records=[]),
+                RecordType(name="Type 2", type="completed", records=[])
+            ]
+            games = [Game(name="Test Game", difficulties=[], record_types=record_types)]
+            test_data = RecordData(games=games)
+            test_data.save(temp_filename)
+
+            # Mock input: select game 1, try invalid record type numbers, then quit
+            inputs = ["1", "0", "3", "99", "q"]
+            input_iter = iter(inputs)
+            monkeypatch.setattr('builtins.input', lambda _: next(input_iter))
+
+            result = RecordData.add_record_to_file(temp_filename, interactive=True)
+            assert result is False
+
+            captured = capsys.readouterr()
+            assert "Please enter a number between 1 and 2" in captured.out
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_invalid_record_type_selection_non_numeric(self, monkeypatch, capsys):
+        """Test record type selection with non-numeric input (covers record_data.py:563-564)"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            # Create game with record types
+            record_types = [RecordType(name="Test Type", type="completed", records=[])]
+            games = [Game(name="Test Game", difficulties=[], record_types=record_types)]
+            test_data = RecordData(games=games)
+            test_data.save(temp_filename)
+
+            # Mock input: select game 1, try non-numeric record type inputs, then quit
+            inputs = ["1", "abc", "1.5", "!", "q"]
+            input_iter = iter(inputs)
+            monkeypatch.setattr('builtins.input', lambda _: next(input_iter))
+
+            result = RecordData.add_record_to_file(temp_filename, interactive=True)
+            assert result is False
+
+            captured = capsys.readouterr()
+            assert "Please enter a valid number or 'q' to quit" in captured.out
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_file_loading_exception(self, monkeypatch, capsys):
+        """Test exception handling during file loading (covers record_data.py:418-420)"""
+        # Create an invalid JSON file
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+            temp_file.write(b"invalid json content")
+
+        try:
+            result = RecordData.add_record_to_file(temp_filename, interactive=True)
+            assert result is False
+
+            captured = capsys.readouterr()
+            assert "Error loading file:" in captured.out
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+

@@ -3,8 +3,10 @@ import os
 import tempfile
 import json
 from click.testing import CliRunner
+from unittest.mock import patch
 from miscore.__main__ import cli
 from miscore import RecordData, Game
+from miscore.record_data import RecordType
 
 # Get the test data directory path
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -286,3 +288,60 @@ class TestCLI:
         )
         assert result.exit_code == 0
         assert "Cancelled by user" in result.output
+
+    def test_add_record_success_message(self):
+        """Test add-record success path and message (covers __main__.py:55)"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            # Create a records file with a game that has record types
+            game_with_record_types = Game(
+                name="Test Game",
+                difficulties=[],
+                record_types=[
+                    RecordType(
+                        name="Completion",
+                        type="completed",
+                        records=[]
+                    )
+                ]
+            )
+            test_data = RecordData(games=[game_with_record_types])
+            test_data.save(temp_filename)
+
+            # Simulate user input to add a completed record
+            user_input = "1\n1\n2024-01-01\n\n\n"  # Select game 1, record type 1, date, no screenshot, confirm
+            result = self.runner.invoke(cli, ["add-record", temp_filename], input=user_input)
+            
+            assert result.exit_code == 0
+            assert f"Record successfully added to {temp_filename}" in result.output
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_add_record_exception_handling(self):
+        """Test add-record exception handling (covers __main__.py:58-59)"""
+        # Create a valid file but mock add_record_to_file to raise an exception
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+            
+        try:
+            # Create a valid records file
+            test_data = RecordData(games=[])
+            test_data.save(temp_filename)
+            
+            # Mock add_record_to_file to raise an exception
+            with patch('miscore.record_data.RecordData.add_record_to_file') as mock_add:
+                mock_add.side_effect = Exception("Test exception")
+                
+                result = self.runner.invoke(cli, ["add-record", temp_filename])
+                
+                assert result.exit_code == 0  # CLI handles exceptions gracefully
+                assert "Error adding record:" in result.output
+                assert "Test exception" in result.output
+                
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)

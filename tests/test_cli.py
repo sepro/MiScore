@@ -300,20 +300,18 @@ class TestCLI:
                 name="Test Game",
                 difficulties=[],
                 record_types=[
-                    RecordType(
-                        name="Completion",
-                        type="completed",
-                        records=[]
-                    )
-                ]
+                    RecordType(name="Completion", type="completed", records=[])
+                ],
             )
             test_data = RecordData(games=[game_with_record_types])
             test_data.save(temp_filename)
 
             # Simulate user input to add a completed record
             user_input = "1\n1\n2024-01-01\n\n\n"  # Select game 1, record type 1, date, no screenshot, confirm
-            result = self.runner.invoke(cli, ["add-record", temp_filename], input=user_input)
-            
+            result = self.runner.invoke(
+                cli, ["add-record", temp_filename], input=user_input
+            )
+
             assert result.exit_code == 0
             assert f"Record successfully added to {temp_filename}" in result.output
 
@@ -326,22 +324,22 @@ class TestCLI:
         # Create a valid file but mock add_record_to_file to raise an exception
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
             temp_filename = temp_file.name
-            
+
         try:
             # Create a valid records file
             test_data = RecordData(games=[])
             test_data.save(temp_filename)
-            
+
             # Mock add_record_to_file to raise an exception
-            with patch('miscore.record_data.RecordData.add_record_to_file') as mock_add:
+            with patch("miscore.record_data.RecordData.add_record_to_file") as mock_add:
                 mock_add.side_effect = Exception("Test exception")
-                
+
                 result = self.runner.invoke(cli, ["add-record", temp_filename])
-                
+
                 assert result.exit_code == 0  # CLI handles exceptions gracefully
                 assert "Error adding record:" in result.output
                 assert "Test exception" in result.output
-                
+
         finally:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)

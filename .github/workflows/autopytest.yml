@@ -49,6 +49,7 @@ jobs:
         run: |
           git config --global user.name coverage_badge_update
           git config --global user.email '${GITHUB_ACTOR}@users.noreply.github.com'
+          git pull --rebase origin main
           git add docs/coverage-badge.svg
           git commit -m "Auto updating coverage badge"
           git push

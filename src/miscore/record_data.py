@@ -138,21 +138,21 @@ class RecordData(BaseModel):
         file. Before the end of the function the working directory is set back to the original.
         """
         old_wd = os.getcwd()
-        current_directory = os.path.dirname(filename)
-        current_file = os.path.basename(filename)
+        # Convert to absolute path to ensure proper directory handling
+        abs_filename = os.path.abspath(filename)
+        current_directory = os.path.dirname(abs_filename)
+        current_file = os.path.basename(abs_filename)
 
-        # Only change directory if there's actually a directory specified
-        if current_directory:
-            os.chdir(current_directory)
+        # Change to the directory containing the JSON file
+        os.chdir(current_directory)
 
         with open(current_file) as fin:
             json_data = json.load(fin)
 
         record_data = RecordData(**json_data)
 
-        # Only restore directory if we changed it
-        if current_directory:
-            os.chdir(old_wd)
+        # Restore original directory
+        os.chdir(old_wd)
 
         return record_data
 

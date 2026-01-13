@@ -1330,6 +1330,7 @@ class TestInteractiveInputValidation:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)
 
+
 def test_add_game_with_existing_screenshot_paths():
     """Test that add_game_to_file works with existing records that have screenshot paths"""
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
@@ -1337,9 +1338,7 @@ def test_add_game_with_existing_screenshot_paths():
 
     # Create a test screenshot file relative to the temp file directory
     screenshot_path = "test_screenshot.png"
-    full_screenshot_path = os.path.join(
-        os.path.dirname(temp_filename), screenshot_path
-    )
+    full_screenshot_path = os.path.join(os.path.dirname(temp_filename), screenshot_path)
 
     try:
         # Create the screenshot file
@@ -1380,7 +1379,9 @@ def test_add_game_with_existing_screenshot_paths():
         result = RecordData.add_game_to_file(
             "Second Game", temp_filename, interactive=False
         )
-        assert result is True, "Failed to add game to file with existing screenshot paths"
+        assert (
+            result is True
+        ), "Failed to add game to file with existing screenshot paths"
 
         # Verify both games are present
         loaded_data = RecordData.load(temp_filename)

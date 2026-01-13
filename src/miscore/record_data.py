@@ -273,14 +273,27 @@ class RecordData(BaseModel):
             )
             record_data = RecordData(games=[new_game])
 
-        # Validate the new data structure before saving
-        # This will raise an exception if invalid, preventing file corruption
-        validated_data = RecordData(**record_data.model_dump())
+        # Maintain working directory context for FilePath validation
+        # This ensures relative screenshot paths are validated correctly
+        old_wd = os.getcwd()
+        current_directory = os.path.dirname(os.path.abspath(filename))
+        if current_directory:
+            os.chdir(current_directory)
 
-        # Only save if validation passes
-        validated_data.save(filename)
+        try:
+            # Validate the new data structure before saving
+            # This will raise an exception if invalid, preventing file corruption
+            validated_data = RecordData(**record_data.model_dump())
 
-        return True
+            # Only save if validation passes
+            validated_data.save(
+                os.path.basename(filename) if current_directory else filename
+            )
+
+            return True
+        finally:
+            if current_directory:
+                os.chdir(old_wd)
 
     @classmethod
     def _create_game_interactive(cls, game_name):

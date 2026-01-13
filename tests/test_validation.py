@@ -1329,3 +1329,72 @@ class TestInteractiveInputValidation:
         finally:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)
+
+def test_add_game_with_existing_screenshot_paths():
+    """Test that add_game_to_file works with existing records that have screenshot paths"""
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+        temp_filename = temp_file.name
+
+    # Create a test screenshot file relative to the temp file directory
+    screenshot_path = "test_screenshot.png"
+    full_screenshot_path = os.path.join(
+        os.path.dirname(temp_filename), screenshot_path
+    )
+
+    try:
+        # Create the screenshot file
+        with open(full_screenshot_path, "w") as f:
+            f.write("fake screenshot")
+
+        # Create initial file with a game that has a record with a screenshot
+        from miscore.record_data import (
+            RecordType,
+            CompletedRecordEntry,
+        )
+
+        # Change to the temp file directory (so FilePath validation works for relative paths)
+        old_wd = os.getcwd()
+        temp_dir = os.path.dirname(temp_filename)
+        if temp_dir:
+            os.chdir(temp_dir)
+
+        try:
+            # Create a record with a relative screenshot path
+            record_with_screenshot = CompletedRecordEntry(
+                date=date.today(), screenshot=screenshot_path
+            )
+
+            completed_rt = RecordType(
+                name="Completion", type="completed", records=[record_with_screenshot]
+            )
+            initial_game = Game(name="Initial Game", record_types=[completed_rt])
+            record_data = RecordData(games=[initial_game])
+
+            # Save the file
+            record_data.save(os.path.basename(temp_filename))
+        finally:
+            os.chdir(old_wd)
+
+        # Now try to add a new game from a different directory
+        # This should work even though we're not in the temp file's directory
+        result = RecordData.add_game_to_file(
+            "Second Game", temp_filename, interactive=False
+        )
+        assert result is True, "Failed to add game to file with existing screenshot paths"
+
+        # Verify both games are present
+        loaded_data = RecordData.load(temp_filename)
+        assert len(loaded_data.games) == 2
+        game_names = [game.name for game in loaded_data.games]
+        assert "Initial Game" in game_names
+        assert "Second Game" in game_names
+
+        # Verify the screenshot path is still valid
+        first_game = next(g for g in loaded_data.games if g.name == "Initial Game")
+        assert first_game.record_types[0].records[0].screenshot.name == screenshot_path
+
+    finally:
+        if os.path.exists(temp_filename):
+            os.unlink(temp_filename)
+        if os.path.exists(full_screenshot_path):
+            os.unlink(full_screenshot_path)

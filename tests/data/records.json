@@ -23,6 +23,7 @@
           "components": ["completed_at_difficulty", "fastest_time"],
           "records": [
             {
+              "entry_type": "complex",
               "date": "2024-01-15",
               "difficulty": "Nightmare",
               "time": "02:15:30"

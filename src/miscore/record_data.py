@@ -3,9 +3,9 @@ import os
 import re
 from datetime import datetime, timedelta, date
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal, Annotated
 
-from pydantic import model_validator, BaseModel, FilePath
+from pydantic import model_validator, BaseModel, FilePath, Field, Discriminator
 
 
 class CompletedRecordEntry(BaseModel, extra="forbid"):
@@ -13,6 +13,7 @@ class CompletedRecordEntry(BaseModel, extra="forbid"):
     Model for tracking when you completed the game (without anything more)
     """
 
+    entry_type: Literal["completed"] = Field(default="completed", frozen=True)
     date: Union[date, datetime]
     description: Optional[str] = None
     screenshot: Optional[FilePath] = None
@@ -23,6 +24,9 @@ class CompletedAtDifficultyRecordEntry(CompletedRecordEntry):
     Model for tracking when you completed the game at a specific difficulty
     """
 
+    entry_type: Literal["completed_at_difficulty"] = Field(
+        default="completed_at_difficulty", frozen=True
+    )
     difficulty: str
 
 
@@ -31,6 +35,7 @@ class TimeRecordEntry(CompletedRecordEntry):
     Model for tracking when you completed the game in a record time
     """
 
+    entry_type: Literal["time"] = Field(default="time", frozen=True)
     time: timedelta
 
 
@@ -39,6 +44,7 @@ class ScoreRecordEntry(CompletedRecordEntry):
     Model for tracking when you completed the game with a record score
     """
 
+    entry_type: Literal["score"] = Field(default="score", frozen=True)
     score: float
 
 
@@ -48,6 +54,7 @@ class ComplexRecordEntry(CompletedRecordEntry):
     Fields are optional at model level; actual requirements enforced by RecordType validator.
     """
 
+    entry_type: Literal["complex"] = Field(default="complex", frozen=True)
     difficulty: Optional[str] = None
     time: Optional[timedelta] = None
     score: Optional[float] = None
@@ -75,12 +82,15 @@ class RecordType(BaseModel):
     components: Optional[List[RecordTypeOptions]] = None
     records: Optional[
         List[
-            Union[
-                CompletedAtDifficultyRecordEntry,
-                TimeRecordEntry,
-                ScoreRecordEntry,
-                ComplexRecordEntry,
-                CompletedRecordEntry,
+            Annotated[
+                Union[
+                    CompletedAtDifficultyRecordEntry,
+                    TimeRecordEntry,
+                    ScoreRecordEntry,
+                    ComplexRecordEntry,
+                    CompletedRecordEntry,
+                ],
+                Discriminator("entry_type"),
             ]
         ]
     ] = None
@@ -185,6 +195,49 @@ class RecordData(BaseModel):
     games: List[Game]
 
     @classmethod
+    def _preprocess_json_data(cls, json_data):
+        """
+        Preprocess JSON data to:
+        1. Normalize path separators (backslash to forward slash) for cross-platform compatibility
+        2. Add entry_type field to records based on RecordType.type for discriminated unions
+        """
+        if "games" not in json_data:
+            return json_data
+
+        for game in json_data["games"]:
+            if "record_types" not in game or game["record_types"] is None:
+                continue
+
+            for record_type in game["record_types"]:
+                if "records" not in record_type or not record_type["records"]:
+                    continue
+
+                # Determine the entry_type based on record_type.type
+                record_type_value = record_type.get("type")
+                if record_type_value == "completed":
+                    entry_type = "completed"
+                elif record_type_value == "completed_at_difficulty":
+                    entry_type = "completed_at_difficulty"
+                elif record_type_value in ["fastest_time", "longest_time"]:
+                    entry_type = "time"
+                elif record_type_value in ["high_score", "low_score"]:
+                    entry_type = "score"
+                else:
+                    continue
+
+                # Process each record
+                for record in record_type["records"]:
+                    # Add entry_type if not present
+                    if "entry_type" not in record:
+                        record["entry_type"] = entry_type
+
+                    # Normalize screenshot path separators
+                    if "screenshot" in record and record["screenshot"]:
+                        record["screenshot"] = record["screenshot"].replace("\\", "/")
+
+        return json_data
+
+    @classmethod
     def load(cls, filename):
         """
         Will load records from a JSON file.
@@ -193,30 +246,56 @@ class RecordData(BaseModel):
         file. Before the end of the function the working directory is set back to the original.
         """
         old_wd = os.getcwd()
-        current_directory = os.path.dirname(filename)
-        current_file = os.path.basename(filename)
+        # Convert to absolute path to ensure proper directory handling
+        abs_filename = os.path.abspath(filename)
+        current_directory = os.path.dirname(abs_filename)
+        current_file = os.path.basename(abs_filename)
 
-        # Only change directory if there's actually a directory specified
-        if current_directory:
-            os.chdir(current_directory)
+        # Change to the directory containing the JSON file
+        os.chdir(current_directory)
 
         with open(current_file) as fin:
             json_data = json.load(fin)
 
+        # Preprocess JSON data for cross-platform compatibility and discriminated unions
+        json_data = cls._preprocess_json_data(json_data)
+
         record_data = RecordData(**json_data)
 
-        # Only restore directory if we changed it
-        if current_directory:
-            os.chdir(old_wd)
+        # Restore original directory
+        os.chdir(old_wd)
 
         return record_data
 
+    @classmethod
+    def _normalize_paths_for_save(cls, data):
+        """
+        Normalize all path separators to forward slashes (Unix-style) for cross-platform compatibility.
+        This ensures that even on Windows, paths are saved with forward slashes.
+        """
+        if isinstance(data, dict):
+            result = {}
+            for key, value in data.items():
+                if key == "screenshot" and isinstance(value, str):
+                    # Normalize screenshot paths to Unix-style
+                    result[key] = value.replace("\\", "/")
+                else:
+                    result[key] = cls._normalize_paths_for_save(value)
+            return result
+        elif isinstance(data, list):
+            return [cls._normalize_paths_for_save(item) for item in data]
+        else:
+            return data
+
     def save(self, filename):
         """
-        Save records to a JSON file.
+        Save records to a JSON file with Unix-style path separators.
         """
+        data = self.model_dump(exclude_none=True)
+        # Normalize all paths to Unix-style (forward slashes)
+        data = self._normalize_paths_for_save(data)
         with open(filename, "w") as fout:
-            json.dump(self.model_dump(exclude_none=True), fout, indent=2, default=str)
+            json.dump(data, fout, indent=2, default=str)
 
     @classmethod
     def add_game_to_file(cls, game_name, filename, interactive=True):

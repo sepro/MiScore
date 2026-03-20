@@ -1514,6 +1514,43 @@ class TestComplexRecordType:
         assert complex_rt.records[0].difficulty == "Nightmare"
         assert complex_rt.records[0].time is not None
 
+    def test_complex_record_preprocess_adds_entry_type(self):
+        """Test that _preprocess_json_data correctly adds entry_type for complex records loaded from JSON"""
+        json_data = {
+            "games": [
+                {
+                    "name": "Test Game",
+                    "difficulties": ["Normal", "Hard"],
+                    "record_types": [
+                        {
+                            "name": "Complex Score at Difficulty",
+                            "type": "complex",
+                            "components": [
+                                "completed_at_difficulty",
+                                "high_score",
+                            ],
+                            "records": [
+                                {
+                                    "date": "2026-03-12",
+                                    "difficulty": "Normal",
+                                    "score": 60.0,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        preprocessed = RecordData._preprocess_json_data(json_data)
+        record = preprocessed["games"][0]["record_types"][0]["records"][0]
+        assert record["entry_type"] == "complex"
+
+        # Also verify the full model can be constructed from this data
+        record_data = RecordData(**preprocessed)
+        assert isinstance(
+            record_data.games[0].record_types[0].records[0], ComplexRecordEntry
+        )
+
     def test_complex_record_save_excludes_none(self):
         """Saving complex records should not include null fields"""
         game = Game(

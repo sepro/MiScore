@@ -222,6 +222,8 @@ class RecordData(BaseModel):
                     entry_type = "time"
                 elif record_type_value in ["high_score", "low_score"]:
                     entry_type = "score"
+                elif record_type_value == "complex":
+                    entry_type = "complex"
                 else:
                     continue
 

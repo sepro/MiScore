@@ -1,5 +1,5 @@
 from miscore import RecordData, Game
-from miscore.record_data import RecordType
+from miscore.record_data import RecordType, ComplexRecordEntry, RecordTypeOptions
 import pytest
 import os
 import tempfile
@@ -490,7 +490,7 @@ class TestInteractiveMode:
 
         try:
             # Mock user input: no difficulties, yes record types, invalid choices, then valid choice
-            user_inputs = ["n", "y", "0", "7", "invalid", "1", "", "", ""]
+            user_inputs = ["n", "y", "0", "8", "invalid", "1", "", "", ""]
             with patch("builtins.input", side_effect=user_inputs):
                 with patch("builtins.print"):
                     result = RecordData.add_game_to_file(
@@ -1326,6 +1326,234 @@ class TestInteractiveInputValidation:
             captured = capsys.readouterr()
             assert "Error loading file:" in captured.out
 
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+
+class TestComplexRecordType:
+    """Tests for the complex record type feature"""
+
+    def test_valid_complex_difficulty_and_time(self):
+        """Valid complex record with difficulty + time components"""
+        game = Game(
+            name="Test Game",
+            difficulties=["Easy", "Hard"],
+            record_types=[
+                RecordType(
+                    name="Difficulty Speedrun",
+                    type="complex",
+                    components=[
+                        RecordTypeOptions.completed_at_difficulty,
+                        RecordTypeOptions.fastest_time,
+                    ],
+                    records=[
+                        ComplexRecordEntry(
+                            date="2024-01-15",
+                            difficulty="Hard",
+                            time=timedelta(hours=2, minutes=15),
+                        )
+                    ],
+                )
+            ],
+        )
+        assert len(game.record_types[0].records) == 1
+
+    def test_valid_complex_difficulty_and_score(self):
+        """Valid complex record with difficulty + score components"""
+        game = Game(
+            name="Test Game",
+            difficulties=["Easy", "Hard"],
+            record_types=[
+                RecordType(
+                    name="Difficulty High Score",
+                    type="complex",
+                    components=[
+                        RecordTypeOptions.completed_at_difficulty,
+                        RecordTypeOptions.high_score,
+                    ],
+                    records=[
+                        ComplexRecordEntry(
+                            date="2024-01-15",
+                            difficulty="Hard",
+                            score=99999.0,
+                        )
+                    ],
+                )
+            ],
+        )
+        assert len(game.record_types[0].records) == 1
+
+    def test_valid_complex_all_three(self):
+        """Valid complex record with difficulty + time + score"""
+        game = Game(
+            name="Test Game",
+            difficulties=["Easy", "Hard"],
+            record_types=[
+                RecordType(
+                    name="Full Complex",
+                    type="complex",
+                    components=[
+                        RecordTypeOptions.completed_at_difficulty,
+                        RecordTypeOptions.fastest_time,
+                        RecordTypeOptions.high_score,
+                    ],
+                    records=[
+                        ComplexRecordEntry(
+                            date="2024-01-15",
+                            difficulty="Hard",
+                            time=timedelta(hours=1),
+                            score=500.0,
+                        )
+                    ],
+                )
+            ],
+        )
+        assert len(game.record_types[0].records) == 1
+
+    def test_complex_missing_required_field(self):
+        """Complex record missing a required field should fail"""
+        with pytest.raises(Exception):
+            RecordType(
+                name="Difficulty Speedrun",
+                type="complex",
+                components=[
+                    RecordTypeOptions.completed_at_difficulty,
+                    RecordTypeOptions.fastest_time,
+                ],
+                records=[
+                    ComplexRecordEntry(
+                        date="2024-01-15",
+                        difficulty="Hard",
+                        # missing time
+                    )
+                ],
+            )
+
+    def test_complex_invalid_difficulty(self):
+        """Complex record with invalid difficulty should fail"""
+        with pytest.raises(Exception):
+            Game(
+                name="Test Game",
+                difficulties=["Easy", "Hard"],
+                record_types=[
+                    RecordType(
+                        name="Difficulty Speedrun",
+                        type="complex",
+                        components=[
+                            RecordTypeOptions.completed_at_difficulty,
+                            RecordTypeOptions.fastest_time,
+                        ],
+                        records=[
+                            ComplexRecordEntry(
+                                date="2024-01-15",
+                                difficulty="Impossible",
+                                time=timedelta(hours=1),
+                            )
+                        ],
+                    )
+                ],
+            )
+
+    def test_complex_empty_components(self):
+        """Complex type with empty components should fail"""
+        with pytest.raises(Exception):
+            RecordType(
+                name="Empty Complex",
+                type="complex",
+                components=[],
+                records=[],
+            )
+
+    def test_complex_missing_components(self):
+        """Complex type with no components should fail"""
+        with pytest.raises(Exception):
+            RecordType(
+                name="No Components",
+                type="complex",
+                records=[],
+            )
+
+    def test_components_on_non_complex_type(self):
+        """Components on a non-complex type should fail"""
+        with pytest.raises(Exception):
+            RecordType(
+                name="Bad Type",
+                type="completed",
+                components=[RecordTypeOptions.fastest_time],
+                records=[],
+            )
+
+    def test_complex_in_components(self):
+        """'complex' as a component should fail"""
+        with pytest.raises(Exception):
+            RecordType(
+                name="Bad Component",
+                type="complex",
+                components=[RecordTypeOptions.complex],
+                records=[],
+            )
+
+    def test_completed_in_components(self):
+        """'completed' as a component should fail"""
+        with pytest.raises(Exception):
+            RecordType(
+                name="Bad Component",
+                type="complex",
+                components=[RecordTypeOptions.completed],
+                records=[],
+            )
+
+    def test_complex_record_in_json_fixture(self):
+        """Test that the complex record in the test fixture loads correctly"""
+        record_data = RecordData.load(os.path.join(TEST_DATA_DIR, "records.json"))
+        doom = record_data.games[0]
+        complex_rt = doom.record_types[1]
+        assert complex_rt.type == RecordTypeOptions.complex
+        assert len(complex_rt.records) == 1
+        assert complex_rt.records[0].difficulty == "Nightmare"
+        assert complex_rt.records[0].time is not None
+
+    def test_complex_record_save_excludes_none(self):
+        """Saving complex records should not include null fields"""
+        game = Game(
+            name="Test Game",
+            difficulties=["Easy", "Hard"],
+            record_types=[
+                RecordType(
+                    name="Difficulty Speedrun",
+                    type="complex",
+                    components=[
+                        RecordTypeOptions.completed_at_difficulty,
+                        RecordTypeOptions.fastest_time,
+                    ],
+                    records=[
+                        ComplexRecordEntry(
+                            date="2024-01-15",
+                            difficulty="Hard",
+                            time=timedelta(hours=2),
+                        )
+                    ],
+                )
+            ],
+        )
+        record_data = RecordData(games=[game])
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            record_data.save(temp_filename)
+
+            with open(temp_filename, "r") as f:
+                saved_data = json.load(f)
+
+            record = saved_data["games"][0]["record_types"][0]["records"][0]
+            assert "score" not in record
+            assert "difficulty" in record
+            assert "time" in record
         finally:
             if os.path.exists(temp_filename):
                 os.unlink(temp_filename)

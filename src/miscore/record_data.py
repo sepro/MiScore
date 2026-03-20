@@ -42,6 +42,17 @@ class ScoreRecordEntry(CompletedRecordEntry):
     score: float
 
 
+class ComplexRecordEntry(CompletedRecordEntry):
+    """
+    Model for tracking complex records that combine multiple record type attributes.
+    Fields are optional at model level; actual requirements enforced by RecordType validator.
+    """
+
+    difficulty: Optional[str] = None
+    time: Optional[timedelta] = None
+    score: Optional[float] = None
+
+
 class RecordTypeOptions(str, Enum):
     completed = "completed"
     completed_at_difficulty = "completed_at_difficulty"
@@ -49,6 +60,7 @@ class RecordTypeOptions(str, Enum):
     longest_time = "longest_time"
     high_score = "high_score"
     low_score = "low_score"
+    complex = "complex"
 
 
 class RecordType(BaseModel):
@@ -60,13 +72,15 @@ class RecordType(BaseModel):
     name: str
     description: Optional[str] = None
     type: RecordTypeOptions
+    components: Optional[List[RecordTypeOptions]] = None
     records: Optional[
         List[
             Union[
-                CompletedRecordEntry,
                 CompletedAtDifficultyRecordEntry,
                 TimeRecordEntry,
                 ScoreRecordEntry,
+                ComplexRecordEntry,
+                CompletedRecordEntry,
             ]
         ]
     ] = None
@@ -79,18 +93,54 @@ class RecordType(BaseModel):
         """
         records = values.records
 
-        if values.type == "completed":
-            for r in records:
-                assert isinstance(r, CompletedRecordEntry)
-        elif values.type == "completed_at_difficulty":
-            for r in records:
-                assert isinstance(r, CompletedAtDifficultyRecordEntry)
-        elif values.type in ["fastest_time", "longest_time"]:
-            for r in records:
-                assert isinstance(r, TimeRecordEntry)
-        elif values.type in ["high_score", "low_score"]:
-            for r in records:
-                assert isinstance(r, ScoreRecordEntry)
+        if values.type == "complex":
+            assert (
+                values.components and len(values.components) > 0
+            ), "Complex record type must have non-empty 'components' list"
+            invalid_components = {"complex", "completed"}
+            for c in values.components:
+                assert (
+                    c.value not in invalid_components
+                ), f"'{c.value}' is not allowed as a component"
+
+            # Map components to required fields
+            component_field_map = {
+                "completed_at_difficulty": "difficulty",
+                "fastest_time": "time",
+                "longest_time": "time",
+                "high_score": "score",
+                "low_score": "score",
+            }
+            required_fields = set()
+            for c in values.components:
+                field = component_field_map.get(c.value)
+                if field:
+                    required_fields.add(field)
+
+            if records:
+                for r in records:
+                    assert isinstance(r, ComplexRecordEntry)
+                    for field in required_fields:
+                        assert getattr(r, field) is not None, (
+                            f"Complex record missing required field '{field}' "
+                            f"(required by components: {[c.value for c in values.components]})"
+                        )
+        else:
+            assert (
+                values.components is None
+            ), "'components' can only be set when type is 'complex'"
+            if values.type == "completed":
+                for r in records:
+                    assert isinstance(r, CompletedRecordEntry)
+            elif values.type == "completed_at_difficulty":
+                for r in records:
+                    assert isinstance(r, CompletedAtDifficultyRecordEntry)
+            elif values.type in ["fastest_time", "longest_time"]:
+                for r in records:
+                    assert isinstance(r, TimeRecordEntry)
+            elif values.type in ["high_score", "low_score"]:
+                for r in records:
+                    assert isinstance(r, ScoreRecordEntry)
 
         return values
 
@@ -115,7 +165,12 @@ class Game(BaseModel):
         if difficulties is not None and values.record_types is not None:
             record_types = values.record_types
             for rt in record_types:
-                if rt.type == "completed_at_difficulty":
+                has_difficulty = rt.type == "completed_at_difficulty" or (
+                    rt.type == "complex"
+                    and rt.components
+                    and RecordTypeOptions.completed_at_difficulty in rt.components
+                )
+                if has_difficulty:
                     if rt.records is not None:
                         for entry in rt.records:
                             assert entry.difficulty in difficulties
@@ -161,7 +216,7 @@ class RecordData(BaseModel):
         Save records to a JSON file.
         """
         with open(filename, "w") as fout:
-            json.dump(self.model_dump(), fout, indent=2, default=str)
+            json.dump(self.model_dump(exclude_none=True), fout, indent=2, default=str)
 
     @classmethod
     def add_game_to_file(cls, game_name, filename, interactive=True):
@@ -302,6 +357,7 @@ class RecordData(BaseModel):
         print("   4. longest_time - Track your longest playthroughs")
         print("   5. high_score - Track your highest scores")
         print("   6. low_score - Track your lowest scores (for golf-style games)")
+        print("   7. complex - Combine multiple record type attributes")
         print("\n   Press Enter with empty input to finish adding record types")
 
         record_types = []
@@ -312,6 +368,7 @@ class RecordData(BaseModel):
             "4": "longest_time",
             "5": "high_score",
             "6": "low_score",
+            "7": "complex",
         }
 
         used_types = set()
@@ -320,7 +377,7 @@ class RecordData(BaseModel):
             print(
                 f"\n   Current record types: {[rt.name for rt in record_types] if record_types else 'None yet'}"
             )
-            choice = input("   Enter record type number (1-6): ").strip()
+            choice = input("   Enter record type number (1-7): ").strip()
 
             if not choice:
                 if record_types:
@@ -336,7 +393,7 @@ class RecordData(BaseModel):
                         choice = empty_again
 
             if choice not in available_types:
-                print("   ⚠️  Please enter a number between 1-6.")
+                print("   ⚠️  Please enter a number between 1-7.")
                 continue
 
             record_type_key = available_types[choice]
@@ -354,12 +411,23 @@ class RecordData(BaseModel):
 
             used_types.add(record_type_key)
 
+            # Get components for complex type
+            components = None
+            if record_type_key == "complex":
+                components = cls._get_complex_components(difficulties)
+                if not components:
+                    continue
+
             # Get name and description for the record type
             name = cls._get_record_type_name(record_type_key)
             description = cls._get_record_type_description()
 
             record_type = RecordType(
-                name=name, description=description, type=record_type_key, records=[]
+                name=name,
+                description=description,
+                type=record_type_key,
+                components=components,
+                records=[],
             )
 
             record_types.append(record_type)
@@ -369,6 +437,64 @@ class RecordData(BaseModel):
             f"\n✨ Final record types: {[f'{rt.name} ({rt.type})' for rt in record_types]}"
         )
         return record_types
+
+    @classmethod
+    def _get_complex_components(cls, difficulties):
+        """
+        Interactive prompt to select components for a complex record type.
+        """
+        print("\n🧩 Select components for the complex record type:")
+        available_components = {
+            "1": "completed_at_difficulty",
+            "2": "fastest_time",
+            "3": "longest_time",
+            "4": "high_score",
+            "5": "low_score",
+        }
+        print("   1. completed_at_difficulty - Include difficulty tracking")
+        print("   2. fastest_time - Include fastest time tracking")
+        print("   3. longest_time - Include longest time tracking")
+        print("   4. high_score - Include high score tracking")
+        print("   5. low_score - Include low score tracking")
+        print("   Press Enter with empty input to finish")
+
+        components = []
+        used_components = set()
+
+        while True:
+            print(
+                f"\n   Current components: {[c.value for c in components] if components else 'None yet'}"
+            )
+            choice = input("   Enter component number (1-5): ").strip()
+
+            if not choice:
+                if components:
+                    break
+                else:
+                    print("   ⚠️  At least one component is required.")
+                    continue
+
+            if choice not in available_components:
+                print("   ⚠️  Please enter a number between 1-5.")
+                continue
+
+            component_key = available_components[choice]
+
+            if component_key in used_components:
+                print(f"   ⚠️  Component '{component_key}' is already added.")
+                continue
+
+            if component_key == "completed_at_difficulty" and not difficulties:
+                print(
+                    "   ⚠️  'completed_at_difficulty' requires the game to have difficulty levels."
+                )
+                continue
+
+            used_components.add(component_key)
+            components.append(RecordTypeOptions(component_key))
+            print(f"   ✅ Added component '{component_key}'")
+
+        return components
 
     @classmethod
     def _get_record_type_name(cls, record_type_key):
@@ -382,6 +508,7 @@ class RecordData(BaseModel):
             "longest_time": "Marathon Run",
             "high_score": "High Score",
             "low_score": "Low Score",
+            "complex": "Complex Record",
         }
 
         default_name = default_names.get(
@@ -558,7 +685,9 @@ class RecordData(BaseModel):
                     print(f"✅ Selected: {selected_rt.name} ({selected_rt.type.value})")
                     return selected_rt
                 else:
-                    print(f"⚠️  Please enter a number between 1 and {len(record_types)}")
+                    print(
+                        f"⚠️  Please enter a number between 1 and {len(record_types)}"
+                    )
 
             except ValueError:
                 print("⚠️  Please enter a valid number or 'q' to quit")
@@ -594,6 +723,20 @@ class RecordData(BaseModel):
             details["score"] = cls._get_score_input(record_type.type)
             if details["score"] is None:
                 return None
+        elif record_type.type == "complex":
+            for component in record_type.components:
+                if component.value == "completed_at_difficulty":
+                    details["difficulty"] = cls._get_difficulty_input(game)
+                    if details["difficulty"] is None:
+                        return None
+                elif component.value in ["fastest_time", "longest_time"]:
+                    details["time"] = cls._get_time_input(component.value)
+                    if details["time"] is None:
+                        return None
+                elif component.value in ["high_score", "low_score"]:
+                    details["score"] = cls._get_score_input(component.value)
+                    if details["score"] is None:
+                        return None
 
         return details
 
@@ -616,6 +759,15 @@ class RecordData(BaseModel):
             return TimeRecordEntry(**base_data, time=details["time"])
         elif record_type in ["high_score", "low_score"]:
             return ScoreRecordEntry(**base_data, score=details["score"])
+        elif record_type == "complex":
+            complex_data = {**base_data}
+            if "difficulty" in details:
+                complex_data["difficulty"] = details["difficulty"]
+            if "time" in details:
+                complex_data["time"] = details["time"]
+            if "score" in details:
+                complex_data["score"] = details["score"]
+            return ComplexRecordEntry(**complex_data)
         else:
             raise ValueError(f"Unknown record type: {record_type}")
 

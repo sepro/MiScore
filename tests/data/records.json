@@ -15,6 +15,19 @@
           "description": "Finish the game at a specific difficulty",
           "type": "completed_at_difficulty",
           "records": []
+        },
+        {
+          "name": "Difficulty Speedrun",
+          "description": "Complete the game at a difficulty as fast as possible",
+          "type": "complex",
+          "components": ["completed_at_difficulty", "fastest_time"],
+          "records": [
+            {
+              "date": "2024-01-15",
+              "difficulty": "Nightmare",
+              "time": "02:15:30"
+            }
+          ]
         }
       ]
     },

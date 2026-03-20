@@ -8,14 +8,6 @@ Are you tired of seeing your high scores appear in online leaderboards and being
 Or maybe you simply enjoy retro games that have no high scores? MiScore is the answer, this tool allows you to set up
 a leaderboard to track scores across different games just for YOU! 
 
-## Planning 
-
-This is very much a work in progress, here is a rough sketch of the steps planned.
-
-  - [X] Work out json schema and Pydantic code to load and validate data
-  - [ ] Interface (textual ?) to add data
-  - [ ] Front-end (Svelte?) to show result on a static webpage
-
 ## Using MiScore
 
 MiScore provides a command-line interface for managing your gaming records.
@@ -57,6 +49,7 @@ During interactive mode, you'll be asked:
     4. **longest_time** - Track your longest playthroughs
     5. **high_score** - Track your highest scores
     6. **low_score** - Track your lowest scores (for golf-style games)
+    7. **complex** - Combine multiple record type attributes (e.g., difficulty + time)
   - For each record type, you can customize the name and add an optional description
   - Press Enter with empty input to finish adding record types
 
@@ -132,7 +125,8 @@ python -m miscore add-record --help
 python -m miscore validate --help
 ```
 
-## Development
+## Documentation
 
-For developers who want to contribute to MiScore, please see the [Development Guide](docs/development.md) for setup instructions, testing guidelines, and code structure information.
+- [JSON Structure Reference](docs/structure.md) - Full JSON schema documentation with examples for all record types including complex records
+- [Development Guide](docs/development.md) - Setup instructions, testing guidelines, and code structure information
 

@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from unittest.mock import patch
 from miscore.__main__ import cli
 from miscore import RecordData, Game
-from miscore.record_data import RecordType
+from miscore.record_data import RecordType, RecordTypeOptions
 
 # Get the test data directory path
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -339,6 +339,50 @@ class TestCLI:
                 assert result.exit_code == 0  # CLI handles exceptions gracefully
                 assert "Error adding record:" in result.output
                 assert "Test exception" in result.output
+
+        finally:
+            if os.path.exists(temp_filename):
+                os.unlink(temp_filename)
+
+    def test_add_complex_record_interactive(self):
+        """Test adding a complex record via CLI interactive mode"""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
+            temp_filename = temp_file.name
+
+        try:
+            game = Game(
+                name="Test Game",
+                difficulties=["Easy", "Hard"],
+                record_types=[
+                    RecordType(
+                        name="Difficulty Speedrun",
+                        type="complex",
+                        components=[
+                            RecordTypeOptions.completed_at_difficulty,
+                            RecordTypeOptions.fastest_time,
+                        ],
+                        records=[],
+                    )
+                ],
+            )
+            test_data = RecordData(games=[game])
+            test_data.save(temp_filename)
+
+            # Select game 1, record type 1, date, no description, no screenshot, difficulty 2 (Hard), time
+            user_input = "1\n1\n2024-06-01\n\n\n2\n1:30:00\n"
+            result = self.runner.invoke(
+                cli, ["add-record", temp_filename], input=user_input
+            )
+
+            assert result.exit_code == 0
+            assert f"Record successfully added to {temp_filename}" in result.output
+
+            # Verify the record was added
+            loaded_data = RecordData.load(temp_filename)
+            records = loaded_data.games[0].record_types[0].records
+            assert len(records) == 1
+            assert records[0].difficulty == "Hard"
+            assert records[0].time is not None
 
         finally:
             if os.path.exists(temp_filename):
